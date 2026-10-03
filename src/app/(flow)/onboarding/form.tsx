@@ -156,8 +156,8 @@ export function OnboardingForm({ initial, hasExisting, baselineHref }: { initial
     body.set("file", file);
     try {
       const res = await fetch("/api/resume/parse", { method: "POST", body });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error ?? "We couldn't read that resume automatically. Try again, or fill in your profile manually.");
       setResume(json.resume);
       setSkillsText(json.resume.skills.join(", "));
       setCertsText(json.resume.certifications.join("\n"));
@@ -165,7 +165,8 @@ export function OnboardingForm({ initial, hasExisting, baselineHref }: { initial
       setParsed(true);
       setStep("review");
     } catch (e) {
-      setError(e instanceof Error && e.message ? e.message : "We couldn't reach the server. Check your connection, or fill in your profile manually.");
+      // A dropped connection arrives as the browser's own TypeError ("Failed to fetch"), which tells a student nothing.
+      setError(e instanceof Error && e.message && !(e instanceof TypeError) ? e.message : "We couldn't reach the server. Try again, or fill in your profile manually.");
       setStep("upload");
     }
   }

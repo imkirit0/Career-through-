@@ -45,3 +45,6 @@ graphify-out/
 !.env.example
 
 demo-credentials.json
+
+# a copy of the env vars made for importing into Vercel: holds secrets
+vercel.env
