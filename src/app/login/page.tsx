@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { getUser } from "@/lib/data";
 import { supabaseConfigured } from "@/lib/supabase/server";
-
 import { FloatingIcons } from "@/components/floating-icons";
 import { LoginForm } from "./form";
 
@@ -34,7 +33,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         
         <div className="relative z-10 max-w-lg">
           <h1 className="text-5xl font-semibold tracking-tighter text-foreground leading-[1.1]">
-            Prove you're ready. <br />
+            Prove you&apos;re ready. <br />
             <span className="text-foreground/40">Not just on paper.</span>
           </h1>
           <p className="mt-6 text-lg text-foreground/60 leading-relaxed font-light">
@@ -66,10 +65,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               Authentication isn&apos;t configured yet. Install the Supabase integration and run <code>vercel env pull</code>.
             </p>
           ) : (
-            <LoginForm 
-              next={next} 
+            <LoginForm
+              next={next}
               startMode={mode === "signup" ? "up" : "in"}
-              initialError={error === "confirm" ? "That confirmation link was invalid or expired. Sign in or request a new one." : undefined} 
+              initialError={error === "confirm" ? "That confirmation link was invalid or expired. Sign in or request a new one." : undefined}
             />
           )}
         </div>

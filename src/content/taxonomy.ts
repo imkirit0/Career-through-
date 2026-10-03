@@ -150,6 +150,34 @@ export function bands(overrides: Partial<Record<BandId, number>> = {}): Band[] {
   return DEFAULT_BANDS.map((b) => ({ ...b, min: overrides[b.id] ?? b.min }));
 }
 
+// ── Code challenges ────────────────────────────────────────────
+// Small exercises run and marked in the browser (SQLite and Python as WebAssembly,
+// JavaScript in a worker). Practice only: never evidence.
+
+export type ChallengeLanguage = "sql" | "javascript" | "python";
+
+export type Challenge = {
+  id: string;
+  skillId: string;
+  topicId: string;
+  language: ChallengeLanguage;
+  title: string;
+  /** Plain text; blank lines separate paragraphs. */
+  brief: string;
+  /** sql only: CREATE TABLE + INSERT statements run before every attempt. */
+  setup?: string;
+  /** What the editor opens with. Must not already pass. */
+  starter: string;
+  /** Reference answer. Expected results come from running it, never from hand-typed values. */
+  solution: string;
+  /**
+   * javascript/python: expressions evaluated after the code has run, e.g. `total([1, 2, 3])`;
+   * each must give a JSON-serialisable value. sql: unused, the query's rows are the check.
+   */
+  checks: string[];
+  hints: string[];
+};
+
 // ── Interview ──────────────────────────────────────────────────
 // Open-ended prompts asked after the multiple-choice section. Answers are stored
 // and evaluated by a pluggable provider; no score is invented before one exists.

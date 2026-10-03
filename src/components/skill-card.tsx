@@ -40,7 +40,7 @@ export function SkillCard({ skill, evidence, formulaVersion }: { skill: SkillRea
 
   return (
     <article className="flex h-full flex-col rounded-[2rem] border border-white/80 bg-white/60 p-5 sm:p-6 xl:p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.02)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:bg-white hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] backdrop-blur-sm">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="min-w-0">
           <h3 className="flex flex-wrap items-center gap-2 font-bold text-[15px] lg:text-[17px] text-foreground dark:text-white">
             {skill.name}

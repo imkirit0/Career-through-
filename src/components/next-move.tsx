@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Check, LockOpen, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowRight, LockOpen, Sparkles, TrendingUp } from "lucide-react";
 import { cn } from "cn";
 import { buttonVariants } from "@/components/ui/button";
 import { getJob } from "@/content/jobs";
@@ -13,32 +13,39 @@ import { Why } from "./why";
 export function NextMove({ action, upNext, formulaVersion }: { action: NextAction; upNext: NextAction[]; formulaVersion: string }) {
   const impact = action.impact;
   const unlocks = impact?.unlockedJobIds.map((id) => getJob(id)).filter((j) => j !== undefined) ?? [];
+  const i = (n: number) => ({ ["--i" as string]: n });
 
   return (
-    <section aria-labelledby="next-move" className="surface-hero overflow-hidden rounded-3xl">
-      <div className="p-6 sm:p-7">
-        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/80">
+    <section aria-labelledby="next-move" className="surface-hero relative overflow-hidden rounded-3xl">
+      {/* Soft colour fields, for depth. Decorative only. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <span className="blob right-[-6%] top-[-40%] size-[360px] bg-white/25" />
+        <span className="blob bottom-[-50%] left-[30%] size-[320px] bg-fuchsia-300/30" style={{ animationDelay: "-6s" }} />
+      </div>
+
+      <div className="relative p-6 sm:p-7">
+        <p className="rise flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/80" style={i(0)}>
           <Sparkles className="size-3.5" aria-hidden />
           Your next move
         </p>
-        <h2 id="next-move" className="mt-2 max-w-3xl text-2xl font-semibold tracking-tight sm:text-3xl">{action.title}</h2>
+        <h2 id="next-move" className="rise mt-2 max-w-3xl text-2xl font-semibold tracking-tight sm:text-3xl" style={i(1)}>{action.title}</h2>
 
         {action.current !== null && action.target !== null ? (
-          <div className="mt-3 max-w-sm">
+          <div className="rise mt-3 max-w-sm" style={i(2)}>
             <p className="flex items-baseline gap-2 text-sm text-white/90">
               <span className="text-2xl font-semibold tabular-nums">{action.current}%</span>
               <ArrowRight className="size-4" aria-hidden />
               <span className="text-2xl font-semibold tabular-nums">{action.target}%</span>
               <span className="text-white/75">{action.kind === "final" ? "readiness threshold" : "target"}</span>
             </p>
-            <div className="mt-2 h-1.5 rounded-full bg-white/25">
-              <div className="h-full rounded-full bg-white transition-[width] duration-700" style={{ width: `${Math.min((action.current / Math.max(action.target, 1)) * 100, 100)}%` }} />
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/25">
+              <div className="grow-x h-full rounded-full bg-white" style={{ width: `${Math.min((action.current / Math.max(action.target, 1)) * 100, 100)}%` }} />
             </div>
           </div>
         ) : null}
 
-        <div className="mt-5 grid max-w-3xl gap-5 sm:grid-cols-2">
-          <div>
+        <div className="mt-5 grid max-w-4xl gap-3 sm:grid-cols-2">
+          <div className="rise rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm" style={i(3)}>
             <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Why now</p>
             <ul className="mt-2 space-y-1 text-sm text-white/90">
               {action.reasons.map((r) => (
@@ -46,7 +53,7 @@ export function NextMove({ action, upNext, formulaVersion }: { action: NextActio
               ))}
             </ul>
           </div>
-          <div>
+          <div className="rise rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm" style={i(4)}>
             <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Expected impact</p>
             {impact ? (
               <ul className="mt-2 space-y-1 text-sm text-white/90">
@@ -77,10 +84,18 @@ export function NextMove({ action, upNext, formulaVersion }: { action: NextActio
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Link href={action.href} className={cn(buttonVariants(), "h-11 bg-white px-6 text-base text-primary hover:bg-white/90")}>
-            {action.action} <ArrowRight className="size-4" aria-hidden />
+        <div className="rise mt-6 flex flex-wrap items-center gap-3" style={i(5)}>
+          <Link
+            href={action.href}
+            className={cn(buttonVariants(), "group h-11 bg-white px-6 text-base text-primary shadow-lg shadow-black/10 transition-transform hover:-translate-y-0.5 hover:bg-white")}
+          >
+            {action.action} <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
           </Link>
+          {action.skillId ? (
+            <Link href={`/practice?skill=${action.skillId}`} className="text-sm font-medium text-white/90 underline-offset-4 hover:text-white hover:underline">
+              Practise first
+            </Link>
+          ) : null}
           <span className="text-white [&_button]:text-white/90 [&_button:hover]:text-white">
             <Why label="Why this?" title="Why this action, ahead of everything else" description={action.why}>
               <div>
@@ -118,11 +133,11 @@ export function NextMove({ action, upNext, formulaVersion }: { action: NextActio
       </div>
 
       {upNext.length ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/15 bg-black/10 px-6 py-3 text-xs text-white/80 sm:px-7">
-          <span className="font-medium uppercase tracking-wider">Then</span>
-          {upNext.slice(0, 3).map((a) => (
-            <span key={a.id} className="flex items-center gap-1.5">
-              <Check className="size-3" aria-hidden />
+        <div className="relative flex flex-wrap items-center gap-2 border-t border-white/15 bg-black/10 px-6 py-3 text-xs text-white/85 sm:px-7">
+          <span className="mr-1 font-semibold uppercase tracking-wider text-white/70">Then</span>
+          {upNext.slice(0, 3).map((a, n) => (
+            <span key={a.id} className="rise inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 ring-1 ring-inset ring-white/15" style={i(6 + n)}>
+              <span className="grid size-4 place-items-center rounded-full bg-white/20 text-[10px] font-semibold tabular-nums">{n + 2}</span>
               {a.title}
             </span>
           ))}

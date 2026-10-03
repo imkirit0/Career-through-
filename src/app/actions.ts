@@ -8,8 +8,11 @@ import { z } from "zod";
 import { attempt, db, evidence, interviewResponse, profile } from "@/db";
 import { CONTENT_VERSION } from "@/content/version";
 import { ROLES, getRole } from "@/content/roles";
-import type { Role } from "@/content/taxonomy";
+import type { Question, Role } from "@/content/taxonomy";
 import { getAssessment } from "@/content/assessments";
+import { getPracticeQuestion } from "@/content/practice";
+import { getChallenge } from "@/content/challenges";
+import { markPractice } from "@/lib/practice";
 import { getPlan } from "@/content/plans";
 import { jobsForRole } from "@/content/jobs";
 import { getProfile, getUser, liveReadiness, recordSnapshot, requireCandidate, requireUser, type Tx } from "@/lib/data";
@@ -53,6 +56,7 @@ export async function signIn(_: ActionResult | null, form: FormData): Promise<Ac
   if (error?.code === "email_not_confirmed") {
     return { error: "This account exists but the email was never confirmed.", needsConfirmation: true };
   }
+  if (error?.status === 0) return { error: "We couldn't reach the sign-in service. Check your connection and try again." };
   if (error) return { error: "That email and password don't match. Try again or create an account." };
   redirect(safeNext(form.get("next")));
 }
@@ -466,7 +470,7 @@ export async function finishInterview(input: unknown): Promise<{ error: string }
 
   if (parsed.data.mode === "practice") {
     await logEvent(user.id, "INTERVIEW_PRACTISED", { setId: parsed.data.setId, turns: parsed.data.transcript.length });
-    return { ok: true, href: "/practice?done=1" };
+    return { ok: true, href: "/practice/report" };
   }
 
   const answers = answersByPrompt(parsed.data.transcript);
@@ -532,6 +536,66 @@ export async function practiceAnswer(input: unknown): Promise<PracticeResult> {
 
   await logEvent(user.id, "INTERVIEW_PRACTISED", { promptId: prompt.id, words: countWords(parsed.data.answer) });
   return { ok: true, feedback: analyseAnswer(prompt, parsed.data.answer) };
+}
+
+// ── Skill practice ─────────────────────────────────────────────
+
+const practiceCheckInput = z.object({ questionId: z.string().max(80), choice: z.number().int().min(0).max(9) });
+
+export type PracticeCheck = { error: string } | { correct: boolean; answer: number; explanation: string };
+
+/** One drill answer. Practice keys are meant to be seen, but only once an answer is in. */
+export async function checkPractice(input: unknown): Promise<PracticeCheck> {
+  const parsed = practiceCheckInput.safeParse(input);
+  if (!parsed.success) return { error: "That answer was not valid." };
+  await requireCandidate();
+  const q = getPracticeQuestion(parsed.data.questionId);
+  if (!q) return { error: "That question could not be found." };
+  return { correct: parsed.data.choice === q.answer, answer: q.answer, explanation: q.explanation };
+}
+
+const practiceFinishInput = z.object({
+  mode: z.enum(["drill", "mock"]),
+  skillId: z.string().max(60),
+  questionIds: z.array(z.string().max(80)).min(1).max(8),
+  answers: z.record(z.string().max(80), z.number().int().min(0).max(9)),
+});
+
+export type PracticeReview =
+  | { error: string }
+  | { correct: number; total: number; ready: boolean; review: { id: string; answer: number; explanation: string }[] };
+
+/**
+ * Mark a finished drill or mock test and remember that it happened. Like interview
+ * practice, it creates no evidence and never moves readiness.
+ */
+export async function finishPractice(input: unknown): Promise<PracticeReview> {
+  const parsed = practiceFinishInput.safeParse(input);
+  if (!parsed.success) return { error: "That practice run was not valid." };
+  const { mode, skillId, questionIds, answers } = parsed.data;
+  const { user, role } = await requireCandidate();
+  if (!role.skills.some((s) => s.skillId === skillId)) return { error: "That skill is not part of your role." };
+  const questions = [...new Set(questionIds)].map(getPracticeQuestion).filter((q): q is Question => q?.skillId === skillId);
+  if (!questions.length) return { error: "Those questions could not be found." };
+
+  const result = markPractice(questions, answers);
+  // No revalidatePath: a refresh mid-run would deal the student a new set of questions.
+  await logEvent(user.id, "SKILL_PRACTISED", { skillId, mode, correct: result.correct, total: result.total });
+  return { ...result, review: questions.map((q) => ({ id: q.id, answer: q.answer, explanation: q.explanation })) };
+}
+
+/**
+ * Remember a solved code challenge. Marking happens in the browser, so this is a note
+ * of practice, not proof: it never becomes evidence.
+ */
+export async function completeChallenge(input: unknown): Promise<{ ok: true } | { error: string }> {
+  const parsed = z.object({ challengeId: z.string().max(80) }).safeParse(input);
+  if (!parsed.success) return { error: "That challenge was not valid." };
+  const { user, role } = await requireCandidate();
+  const challenge = getChallenge(parsed.data.challengeId);
+  if (!challenge || !role.skills.some((s) => s.skillId === challenge.skillId)) return { error: "That challenge could not be found." };
+  await logEvent(user.id, "CODE_CHALLENGE_PASSED", { challengeId: challenge.id, skillId: challenge.skillId });
+  return { ok: true };
 }
 
 // ── Plan ───────────────────────────────────────────────────────

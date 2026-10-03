@@ -13,6 +13,7 @@ import { matchJobs, type JobMatch } from "./matching";
 import { nextUnlock, withProjectedImpact } from "./simulate";
 import { computeJourney } from "./journey";
 import { logEvent } from "./events";
+import type { PracticeMode } from "./practice";
 
 export type Profile = typeof profile.$inferSelect;
 export type Attempt = typeof attempt.$inferSelect;
@@ -178,6 +179,26 @@ export async function getCandidateState(userId: string, p: Profile, role: Role) 
   const planDone = new Set(events.map((e) => `${e.metadata.skillId}:${e.metadata.day}`));
 
   return { ...live, snapshots, attempts, completed, baselineDone, hasProject, journey, planDone, interview };
+}
+
+/** Finished drills and mock tests, newest first. History only: practice is never evidence. */
+export async function getPracticeLog(userId: string) {
+  const rows = await db
+    .select({ metadata: careerEvent.metadata, createdAt: careerEvent.createdAt })
+    .from(careerEvent)
+    .where(and(eq(careerEvent.userId, userId), eq(careerEvent.eventType, "SKILL_PRACTISED")))
+    .orderBy(desc(careerEvent.createdAt))
+    .limit(100);
+  return rows.map((r) => ({ ...(r.metadata as { skillId: string; mode: PracticeMode; correct: number; total: number }), createdAt: r.createdAt }));
+}
+
+/** Ids of code challenges the candidate has passed. Practice history only. */
+export async function getSolvedChallenges(userId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ metadata: careerEvent.metadata })
+    .from(careerEvent)
+    .where(and(eq(careerEvent.userId, userId), eq(careerEvent.eventType, "CODE_CHALLENGE_PASSED")));
+  return new Set(rows.map((r) => String(r.metadata.challengeId)));
 }
 
 export type CandidateState = Awaited<ReturnType<typeof getCandidateState>>;

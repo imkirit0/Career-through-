@@ -30,7 +30,7 @@ export function ReportClient({ prompts }: { prompts: PracticePromptLite[] }) {
         icon={MessageSquare}
         title="No practice session to write up"
         body="Finish a practice interview and the write-up appears here. It is built from your transcript in this browser, so it disappears when you close the tab."
-        href="/practice"
+        href="/practice/interview"
         cta="Start practising"
       />
     );
@@ -70,7 +70,7 @@ export function ReportClient({ prompts }: { prompts: PracticePromptLite[] }) {
         </section>
       ))}
       <div className="flex flex-wrap gap-3">
-        <Link href="/practice" className={cn(buttonVariants(), "h-10 px-5")}>Practise again</Link>
+        <Link href="/practice/interview" className={cn(buttonVariants(), "h-10 px-5")}>Practise again</Link>
         <Link href="/assessments" className={cn(buttonVariants({ variant: "outline" }), "h-10 px-5")}>Take a scored assessment</Link>
       </div>
     </div>

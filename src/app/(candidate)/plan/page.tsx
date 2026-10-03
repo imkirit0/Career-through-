@@ -117,7 +117,7 @@ export default async function PlanPage() {
               <p className="mt-3 text-xs text-muted-foreground">
                 {interview.answered ? `${interview.answered} interview answers recorded so far${interview.scored ? `, ${interview.scored} scored` : ", awaiting evaluation"}.` : "You haven't answered an interview question yet."}
               </p>
-              <Link href="/practice" className={cn(buttonVariants(), "mt-4 h-10")}>
+              <Link href="/practice/interview" className={cn(buttonVariants(), "mt-4 h-10")}>
                 Start practising <ArrowRight className="size-4" aria-hidden />
               </Link>
             </div>
@@ -259,7 +259,7 @@ function SkillPlanCard({ action, skill, daysDone }: { action: NextAction; skill:
         {dimension !== "technical" ? (
           <li className="flex gap-2">
             <MessageSquare className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            Also rehearsable in <Link href="/practice" className="text-primary hover:underline">interview practice</Link>
+            Also rehearsable in <Link href="/practice/interview" className="text-primary hover:underline">interview practice</Link>
           </li>
         ) : null}
       </ul>
@@ -273,6 +273,9 @@ function SkillPlanCard({ action, skill, daysDone }: { action: NextAction; skill:
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Link href={action.href} className={cn(buttonVariants({ variant: "secondary" }), "h-9 flex-1 min-w-[140px]")}>
           {action.action.replace(/^Start \d+-day /, "Open ").replace(/ plan$/, " plan")}
+        </Link>
+        <Link href={`/practice?skill=${skill.skillId}`} className="text-sm font-medium text-primary hover:underline">
+          Practise
         </Link>
         <Link href={`/assessment/skill:${skill.skillId}`} className="text-sm font-medium text-primary hover:underline">
           Prove it →

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { InterviewCall, type CallTurn } from "@/components/interview-call";
-import { finishInterview, interviewTurn } from "../../actions";
+import { finishInterview, interviewTurn } from "../../../actions";
 
 /** Practice conversation: rehearsal only, nothing stored as evidence. */
 export function PracticeCall({ setId, title, subtitle, durationMin }: { setId: string; title: string; subtitle: string; durationMin: number }) {

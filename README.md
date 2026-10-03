@@ -178,9 +178,25 @@ To also run the database integration test: `TEST_DATABASE_URL=postgres://... npm
 
 ---
 
+## The practice hub
+
+**Practice** (`/practice`) is where a candidate rehearses before anything counts. One skill is in focus (the one their next move is about, unless they change it) and there are three ways in:
+
+| Door | What it is |
+|---|---|
+| **Quick drill** (`/practice/drill`) | 5 untimed questions, one per screen. Each answer is marked on the spot with the explanation. |
+| **Mock test** (`/practice/mock`) | 6 questions in 8 minutes, in the assessment's format. Nothing is revealed until the end, then every answer is reviewed. |
+| **Interview** (`/practice/interview`) | The spoken or written interview rehearsal described below. |
+
+**Practice has its own question bank** (`src/content/practice/`, 8 per skill). The scored questions in `src/content/skills/` are never served here, because practice shows answers and assessments must not leak. A test enforces that the two banks share no question.
+
+A run leads with the topics the candidate's latest assessment got wrong. Finished runs are logged as `SKILL_PRACTISED` events so the hub can show the last result; they create no evidence and never move readiness. A run ends with one next step: the assessment at 80% or better, the skill's plan otherwise.
+
+The loop is **learn → practise → prove → apply**: plan pages and the dashboard's next move link into practice, and an assessment result that leaves a gap links to a drill on it.
+
 ## Interview practice and the confidence track
 
-**Practice** (`/practice`) is a spoken mock interview, separate from assessment. It opens with "Hello, can you hear me?", introduces itself using the candidate's real profile and weakest skills, asks its questions, and **probes whatever the answer was missing** before moving on. Answer out loud or type; nothing is recorded as evidence, so a candidate can be bad at it first.
+**Interview practice** (`/practice/interview`) is a spoken mock interview, separate from assessment. It opens with "Hello, can you hear me?", introduces itself using the candidate's real profile and weakest skills, asks its questions, and **probes whatever the answer was missing** before moving on. Answer out loud or type; nothing is recorded as evidence, so a candidate can be bad at it first.
 
 Voice uses the browser's own engines — `SpeechRecognition` for listening and `speechSynthesis` for speaking — so it needs **no API key** and no audio ever leaves the machine. Speech-to-text is Chrome-only today; elsewhere the call falls back to typing automatically. Both modes produce the same transcript.
 
@@ -196,7 +212,7 @@ The follow-up is chosen from the same analysis as the written feedback, so it as
 
 It probes **once** per question, then moves on — the same courtesy a real interviewer extends. `src/lib/interview/conductor.ts` holds the dialogue engine; swapping `nextInterviewerTurn` for a model call is all that's needed to make the conversation fully AI-driven.
 
-The written one-question-at-a-time mode is still there at `/practice?mode=written`.
+The written one-question-at-a-time mode is still there at `/practice/interview?mode=written`.
 
 The feedback is rule-based and deliberately honest about its limits. It reports what can actually be measured:
 

@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { attempt, careerEvent, db, evidence, interviewResponse, profile, readinessSnapshot } from "@/db";
 import { CONTENT_VERSION } from "@/content/version";
 import { getRole } from "@/content/roles";
+import { getSkill } from "@/content/skills";
 import { QUESTIONS, getAssessment } from "@/content/assessments";
 import { jobsForRole } from "@/content/jobs";
 import { selectQuestions } from "./assessment";
@@ -35,9 +36,14 @@ describe.skipIf(!process.env.SEED_DEMO)("seed demo candidate", () => {
     const baselineQs = selectQuestions(baselineDef, QUESTIONS, baselineId);
 
     // A believable starting point: stronger on fundamentals, weak on the specialist skills.
-    const strong = ["linux", "git", "comm-written", "apt-logical"];
-    const weak = ["iac", "monitoring", "networking"];
-    const retakeSkills = ["docker", "ci-cd", "networking"].filter((id) => skillIds.includes(id));
+    // Other roles get the same shape from their own skill list: a candidate who has retaken
+    // the role's first three skills and is still weak on the last two.
+    const persona =
+      ROLE.id === "devops-engineer"
+        ? { strong: ["linux", "git", "comm-written", "apt-logical"], weak: ["iac", "monitoring", "networking"], retake: ["docker", "ci-cd", "networking"] }
+        : { strong: skillIds.slice(0, 2), weak: skillIds.slice(-2), retake: skillIds.slice(0, 3) };
+    const { strong, weak } = persona;
+    const retakeSkills = persona.retake.filter((id) => skillIds.includes(id));
 
     /** What a retake of this skill scores when N answers are right, per the adaptive engine. */
     const retakeScore = (skillId: string, correct: number) => {
@@ -117,13 +123,15 @@ describe.skipIf(!process.env.SEED_DEMO)("seed demo candidate", () => {
     expect(error, error?.message).toBeNull();
     const userId = created!.user!.id;
 
+    // The resume has to belong to the role, or it claims nothing and reads wrong on screen.
+    const devops = ROLE.id === "devops-engineer";
     const resume = {
       ...EMPTY_RESUME,
       name: "Priya Nair",
-      headline: "Final-year B.E. student targeting platform engineering",
-      skills: ["Linux", "Git", "Docker", "Jenkins", "AWS", "Bash"],
+      headline: devops ? "Final-year B.E. student targeting platform engineering" : `Final-year B.E. student targeting ${ROLE.title} roles`,
+      skills: devops ? ["Linux", "Git", "Docker", "Jenkins", "AWS", "Bash"] : skillIds.slice(0, 4).map((id) => getSkill(id).name),
       education: [{ institution: "PES Institute of Technology", degree: "B.E. Computer Science", year: "2026" }],
-      projects: [{ name: "Containerised CI pipeline for a class project", description: "Dockerised a Node service and deployed it from GitHub Actions.", url: "" }],
+      projects: devops ? [{ name: "Containerised CI pipeline for a class project", description: "Dockerised a Node service and deployed it from GitHub Actions.", url: "" }] : [],
       experience: [],
       certifications: [],
       links: [],
@@ -141,20 +149,23 @@ describe.skipIf(!process.env.SEED_DEMO)("seed demo candidate", () => {
 
     await db.transaction(async (tx) => {
       const claims = claimedSkills(ROLE, resume);
-      await tx.insert(evidence).values(
-        claims.map((skillId) => ({
-          userId,
-          skillId,
-          type: "resume_claim" as const,
-          source: "resume",
-          score: 30,
-          confidence: "low" as const,
-          verified: false,
-          detail: { title: "Listed on your confirmed resume" },
-          contentVersion: CONTENT_VERSION,
-          createdAt: new Date(Date.now() - 14 * 86_400_000),
-        })),
-      );
+      // Same guard as confirmProfile: an insert with no rows throws.
+      if (claims.length) {
+        await tx.insert(evidence).values(
+          claims.map((skillId) => ({
+            userId,
+            skillId,
+            type: "resume_claim" as const,
+            source: "resume",
+            score: 30,
+            confidence: "low" as const,
+            verified: false,
+            detail: { title: "Listed on your confirmed resume" },
+            contentVersion: CONTENT_VERSION,
+            createdAt: new Date(Date.now() - 14 * 86_400_000),
+          })),
+        );
+      }
       await logEvent(userId, "ROLE_SELECTED", { roleId: ROLE.id }, tx);
       await logEvent(userId, "PROFILE_CONFIRMED", { claimedSkills: claims.length }, tx);
       await recordSnapshot(tx, userId, ROLE, "profile_confirmed");

@@ -32,7 +32,7 @@ export function NextUnlock({ unlock }: { unlock: NextUnlockData }) {
           <span className="tabular-nums text-muted-foreground">{progressPct}% there</span>
         </div>
         <div className="mt-1.5 h-2 rounded-full bg-muted" role="meter" aria-valuemin={0} aria-valuemax={total} aria-valuenow={met} aria-label={`${job.title} requirements met`}>
-          <div className="h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${progressPct}%` }} />
+          <div className="grow-x h-full rounded-full bg-primary" style={{ width: `${progressPct}%` }} />
         </div>
       </div>
 
@@ -41,7 +41,7 @@ export function NextUnlock({ unlock }: { unlock: NextUnlockData }) {
       </p>
       <ol className="mt-2 space-y-2">
         {match.blockers.map((b, i) => (
-          <li key={b.message} className="flex items-start gap-2.5 text-sm">
+          <li key={b.message} className="rise flex items-start gap-2.5 text-sm" style={{ ["--i" as string]: 4 + i }}>
             <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-md bg-muted text-[11px] font-semibold tabular-nums text-muted-foreground">
               {String(i + 1).padStart(2, "0")}
             </span>

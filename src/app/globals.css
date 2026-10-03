@@ -245,6 +245,46 @@
     opacity: 1 !important;
     transform: none !important;
   }
+  /* Value animations jump straight to their end state. */
+  .grow-x,
+  .arc,
+  .countup {
+    animation-delay: 0s !important;
+  }
+}
+
+/* ── Dashboard motion ───────────────────────────────────────────
+   Values arrive rather than appear: bars grow, the arc draws, the score counts.
+   All CSS, all once, all skipped under prefers-reduced-motion above. */
+
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+}
+
+/* A bar fill. Width is the real value; the animation only scales it in from the left. */
+.grow-x {
+  transform-origin: left;
+  animation: grow-x 900ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: 250ms;
+}
+
+@keyframes arc {
+  from { stroke-dashoffset: var(--len); }
+}
+
+.arc {
+  animation: arc 1100ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: 200ms;
+}
+
+@keyframes countup {
+  from { --num: 0; }
+}
+
+/* Pairs with .tally: counts from 0 to --num on first paint. */
+.countup {
+  animation: countup 1100ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: 200ms;
 }
 
 /* ── Landing motion ─────────────────────────────────────────────

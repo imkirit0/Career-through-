@@ -1,130 +1,116 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MessageSquare, Mic, Users } from "lucide-react";
+import { redirect } from "next/navigation";
+import { Code2, MessageSquare, Timer, Zap, type LucideIcon } from "lucide-react";
 import { cn } from "cn";
-import { PageHeader } from "@/components/bits";
-import { promptsForRole, promptsForSkill } from "@/content/interview";
+import { buttonVariants } from "@/components/ui/button";
+import { ChoicePicker, PageHeader } from "@/components/bits";
+import { LinkArrow } from "@/components/pending";
+import { challengesForSkill } from "@/content/challenges";
 import { getSkill } from "@/content/skills";
-import type { InterviewPrompt } from "@/content/taxonomy";
-import { getCandidateState, requireCandidate } from "@/lib/data";
-import { interviewScoringAvailable } from "@/lib/interview/provider";
-import { PracticeClient, type PracticePrompt } from "./practice-client";
-import { PracticeCall } from "./call";
+import { getPracticeLog, getSolvedChallenges, liveReadiness, requireCandidate } from "@/lib/data";
+import { timeAgo } from "@/lib/format";
+import { PRACTICE_MODES, type PracticeMode } from "@/lib/practice";
 
-export const metadata: Metadata = { title: "Interview practice" };
+export const metadata: Metadata = { title: "Practice" };
 
-const KIND_LABEL = { behavioural: "Behavioural", technical: "Technical", situational: "Situational" };
+export default async function PracticePage({ searchParams }: { searchParams: Promise<{ skill?: string; set?: string; mode?: string }> }) {
+  const { skill, set, mode } = await searchParams;
+  // Interview practice used to live at this address.
+  if (set || mode) redirect(`/practice/interview?${new URLSearchParams({ ...(set ? { set } : {}), ...(mode ? { mode } : {}) })}`);
 
-export default async function PracticePage({ searchParams }: { searchParams: Promise<{ set?: string; mode?: string }> }) {
-  const { set, mode } = await searchParams;
-  const { user, profile, role } = await requireCandidate();
-  const { readiness } = await getCandidateState(user.id, profile, role);
+  const { user, role } = await requireCandidate();
+  const [{ readiness }, log, solved] = await Promise.all([liveReadiness(user.id, role), getPracticeLog(user.id), getSolvedChallenges(user.id)]);
 
-  // Sets: the role's own interview, plus one per role skill so you can rehearse a weak area.
-  const weakest = [...readiness.perSkill].filter((p) => p.gap < 0).sort((a, b) => a.level / a.target - b.level / b.target);
-  const sets = [
-    { id: "role", label: `${role.title} interview`, hint: "Behavioural and situational — the questions every interview opens with." },
-    ...role.skills.map((s) => ({ id: s.skillId, label: getSkill(s.skillId).name, hint: `Technical questions on ${getSkill(s.skillId).name}.` })),
-  ];
-  const active = sets.find((s) => s.id === set) ?? sets[0];
-  const source: InterviewPrompt[] = active.id === "role" ? promptsForRole(role.id) : promptsForSkill(active.id);
-
-  const prompts: PracticePrompt[] = source.map((p) => ({
-    id: p.id,
-    kind: p.kind,
-    depth: p.depth,
-    prompt: p.prompt,
-    context: p.context,
-    lookFor: p.lookFor,
-    minWords: p.minWords,
-    label: `${KIND_LABEL[p.kind]} · ${p.depth === 1 ? "warm-up" : p.depth === 2 ? "core" : "probing"}`,
-  }));
+  // Default to the skill the student's next move is about, so practice feeds the plan.
+  const suggested = readiness.nextActions.find((a) => a.skillId)?.skillId ?? role.skills[0].skillId;
+  const skillId = role.skills.some((s) => s.skillId === skill) ? skill! : suggested;
+  const name = getSkill(skillId).name;
+  // Code challenges exist for the runnable skills only; a role with none gets three doors.
+  const codeSkills = role.skills.map((s) => s.skillId).filter((id) => challengesForSkill(id).length);
+  const codeSkill = codeSkills.includes(skillId) ? skillId : codeSkills[0];
+  const codePool = codeSkill ? challengesForSkill(codeSkill) : [];
+  const codeDone = codePool.filter((c) => solved.has(c.id)).length;
+  const last = (m: PracticeMode) => {
+    const run = log.find((l) => l.skillId === skillId && l.mode === m);
+    return run ? `Last time: ${run.correct} of ${run.total} · ${timeAgo(run.createdAt)}` : undefined;
+  };
 
   return (
-    <div className="flex-1 flex flex-col h-full">
-      <PageHeader
-        title="Interview practice"
-        subtitle="A real conversation: the interviewer greets you, asks about your background, and digs into whatever you gloss over. Answer out loud or type. Nothing here counts as evidence, so you can be bad at it first."
+    <>
+      <PageHeader title="Practice" subtitle="Get it wrong here, where it costs nothing. Practice never changes your readiness." />
+
+      <ChoicePicker
+        label="Practising"
+        current={skillId}
+        options={role.skills.map((s) => ({ id: s.skillId, label: getSkill(s.skillId).name, href: `/practice?skill=${s.skillId}` }))}
       />
 
-      <div className="mb-5 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
-        <div className="card-soft p-4 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] border-white/60 dark:border-white/10 dark:bg-white/5 bg-white/60">
-          <p className="flex items-center gap-2 text-sm font-semibold"><Users className="size-4 text-primary" aria-hidden />Soft skills</p>
-          <p className="mt-1 text-sm text-muted-foreground dark:text-white/70">
-            Communication and workplace judgement are scored skills for {role.title}. Practise them here, then prove them in an assessment.
-          </p>
-          <Link href="/plan#confidence" className="mt-2 inline-block text-sm font-medium text-primary hover:underline">Open the confidence track →</Link>
-        </div>
-        <div className="card-soft p-4 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] border-white/60 dark:border-white/10 dark:bg-white/5 bg-white/60">
-          <p className="flex items-center gap-2 text-sm font-semibold"><MessageSquare className="size-4 text-primary" aria-hidden />Weakest first</p>
-          <p className="mt-1 text-sm text-muted-foreground dark:text-white/70">
-            {weakest.length ? `Your thinnest skill right now is ${weakest[0].name} (${weakest[0].level}% of ${weakest[0].target}%).` : "Every skill meets its target — rehearse the role interview."}
-          </p>
-          {weakest.length ? (
-            <Link href={`/practice?set=${weakest[0].skillId}`} className="mt-2 inline-block text-sm font-medium text-primary hover:underline">
-              Practise {weakest[0].name} questions →
-            </Link>
-          ) : null}
-        </div>
-        <div className="card-soft p-4 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] border-white/60 dark:border-white/10 dark:bg-white/5 bg-white/60">
-          <p className="flex items-center gap-2 text-sm font-semibold"><Mic className="size-4 text-primary" aria-hidden />The scored one</p>
-          <p className="mt-1 text-sm text-muted-foreground dark:text-white/70">
-            {interviewScoringAvailable()
-              ? "Every assessment ends with a scored interview against a fixed rubric."
-              : "Every assessment ends with interview questions. They are recorded now and scored once evaluation is connected."}
-          </p>
-          <Link href="/assessments" className="mt-2 inline-block text-sm font-medium text-primary hover:underline">Go to assessments →</Link>
-        </div>
+      <div className={cn("grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2", codeSkill ? "xl:grid-cols-4" : "xl:grid-cols-3")}>
+        <Door
+          icon={Zap}
+          title={PRACTICE_MODES.drill.label}
+          body={`${PRACTICE_MODES.drill.count} questions, no timer. After each one you see the answer and why.`}
+          meta={last("drill")}
+          href={`/practice/drill?skill=${skillId}`}
+          cta="Start a drill"
+          primary
+        />
+        <Door
+          icon={Timer}
+          title={PRACTICE_MODES.mock.label}
+          body={`${PRACTICE_MODES.mock.count} questions in ${PRACTICE_MODES.mock.minutes} minutes, like the real assessment. Answers come at the end.`}
+          meta={last("mock")}
+          href={`/practice/mock?skill=${skillId}`}
+          cta="Start a mock test"
+        />
+        {codeSkill ? (
+          <Door
+            icon={Code2}
+            title="Code challenges"
+            body={
+              codeSkill === skillId
+                ? `Write real ${getSkill(codeSkill).name} in the browser and check it against the examples.`
+                : `None for ${name} yet. ${getSkill(codeSkill).name} has ${codePool.length} to work through.`
+            }
+            meta={codeDone ? `${codeDone} of ${codePool.length} solved` : `${codePool.length} challenges`}
+            href={`/practice/code?skill=${codeSkill}`}
+            cta="Open the editor"
+          />
+        ) : null}
+        <Door
+          icon={MessageSquare}
+          title="Interview"
+          body="Talk through real interview questions, out loud or typed, and hear what to tighten."
+          href="/practice/interview"
+          cta="Start an interview"
+        />
       </div>
 
-      <nav aria-label="Question sets" className="mb-5 flex flex-wrap gap-2">
-        {sets.map((s) => (
-          <Link
-            key={s.id}
-            href={s.id === "role" ? "/practice" : `/practice?set=${s.id}`}
-            aria-current={s.id === active.id ? "page" : undefined}
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-medium transition-colors shadow-sm",
-              s.id === active.id ? "bg-primary text-primary-foreground shadow-[0_4px_15px_-3px_rgba(0,0,0,0.2)]" : "bg-white/80 dark:bg-white/10 text-foreground hover:bg-white dark:hover:bg-white/20 border border-white/60 dark:border-white/5",
-            )}
-          >
-            {s.label}
-          </Link>
-        ))}
-      </nav>
+      <p className="mt-5 text-sm text-muted-foreground">
+        Feeling ready?{" "}
+        <Link href={`/assessment/skill:${skillId}`} className="font-medium text-primary hover:underline">
+          Take the {name} assessment
+        </Link>{" "}
+        to make it count.
+      </p>
+    </>
+  );
+}
 
-      <div className="flex-1 flex flex-col min-h-0">
-        {mode === "written" ? (
-          <>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Written practice — one question at a time, with feedback after each.{" "}
-              <Link href={active.id === "role" ? "/practice" : `/practice?set=${active.id}`} className="font-medium text-primary hover:underline">
-                Switch to the spoken interview →
-              </Link>
-            </p>
-            {prompts.length ? <PracticeClient key={active.id} prompts={prompts} /> : null}
-          </>
-        ) : prompts.length ? (
-          <>
-            <PracticeCall
-              key={active.id}
-              setId={active.id}
-              title="Interviewer"
-              subtitle={`Career Through · ${active.label} · practice, not recorded`}
-              durationMin={12}
-            />
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              Answer out loud, or{" "}
-              <Link href={`/practice?${active.id === "role" ? "" : `set=${active.id}&`}mode=written`} className="font-medium text-primary hover:underline">
-                practise in writing instead
-              </Link>
-              .
-            </p>
-          </>
-        ) : (
-          <p className="rounded-2xl border bg-muted/40 p-6 text-sm text-muted-foreground">No practice questions for this set yet.</p>
-        )}
-      </div>
-    </div>
+/** One way to practise: what it is in a sentence, and a single button. */
+function Door({ icon: Icon, title, body, meta, href, cta, primary }: { icon: LucideIcon; title: string; body: string; meta?: string; href: string; cta: string; primary?: boolean }) {
+  return (
+    <article className="card-soft flex h-full flex-col p-5 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+      <span className="grid size-10 place-items-center rounded-xl bg-secondary text-primary">
+        <Icon className="size-5" aria-hidden />
+      </span>
+      <h2 className="mt-3 font-semibold">{title}</h2>
+      <p className="mt-1 flex-1 text-sm text-muted-foreground">{body}</p>
+      {meta ? <p className="mt-3 text-xs text-muted-foreground">{meta}</p> : null}
+      <Link href={href} className={cn(buttonVariants({ variant: primary ? "default" : "secondary" }), "mt-4 h-10")}>
+        {cta} <LinkArrow />
+      </Link>
+    </article>
   );
 }

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/pending";
 import type { AnswerFeedback } from "@/lib/interview/feedback";
-import { practiceAnswer, type PracticeResult } from "../../actions";
+import { practiceAnswer, type PracticeResult } from "../../../actions";
 
 export type PracticePrompt = {
   id: string;

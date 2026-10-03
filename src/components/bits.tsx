@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { Check, type LucideIcon } from "lucide-react";
 import { cn } from "cn";
@@ -17,9 +17,39 @@ export function PageHeader({ title, subtitle, children }: { title: string; subti
   );
 }
 
-export function Panel({ title, action, className, children, id }: { title?: string; action?: ReactNode; className?: string; children: ReactNode; id?: string }) {
+/** Shows the one current choice; the alternatives stay folded away until asked for. */
+export function ChoicePicker({ label, current, options }: { label: string; current: string; options: { id: string; label: string; href: string }[] }) {
   return (
-    <section id={id} className={cn("group relative overflow-hidden rounded-3xl border border-white/20 bg-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:bg-white/50 p-6 sm:p-8 dark:border-white/10 dark:bg-black/40 dark:hover:bg-black/50", className)}>
+    <details className="group mb-5">
+      <summary className="flex w-fit cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg text-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="rounded-full bg-secondary px-3 py-1 font-medium text-secondary-foreground">
+          {options.find((o) => o.id === current)?.label}
+        </span>
+        <span className="font-medium text-primary group-open:hidden">Change</span>
+      </summary>
+      <nav aria-label={label} className="mt-3 flex flex-wrap gap-2">
+        {options.map((o) => (
+          <Link
+            key={o.id}
+            href={o.href}
+            aria-current={o.id === current ? "page" : undefined}
+            className={cn(
+              "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+              o.id === current ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted",
+            )}
+          >
+            {o.label}
+          </Link>
+        ))}
+      </nav>
+    </details>
+  );
+}
+
+export function Panel({ title, action, className, style, children, id }: { title?: string; action?: ReactNode; className?: string; style?: CSSProperties; children: ReactNode; id?: string }) {
+  return (
+    <section id={id} className={cn("group relative overflow-hidden rounded-3xl border border-white/20 bg-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:bg-white/50 p-6 sm:p-8 dark:border-white/10 dark:bg-black/40 dark:hover:bg-black/50", className)} style={style}>
       <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/10 blur-[60px] transition-transform duration-700 group-hover:scale-110" aria-hidden />
       <div className="pointer-events-none absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-indigo-500/10 blur-[60px] transition-transform duration-700 group-hover:scale-110" aria-hidden />
       <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/0 opacity-50 dark:from-white/10" pointer-events-none="true" />
@@ -129,12 +159,13 @@ export function Gauge({ score, label, light }: { score: number; label: string; l
           strokeLinecap="round"
           strokeDasharray={len}
           strokeDashoffset={len * (1 - score / 100)}
-          className={cn("transition-[stroke-dashoffset] duration-1000", light ? "stroke-white" : "stroke-primary")}
+          style={{ ["--len" as string]: len }}
+          className={cn("arc transition-[stroke-dashoffset] duration-1000", light ? "stroke-white" : "stroke-primary")}
         />
       </svg>
       <div className="absolute inset-x-0 bottom-0 text-center">
-        <p className="text-4xl font-semibold tabular-nums tracking-tight">
-          {score}
+        <p className="text-4xl font-semibold tabular-nums tracking-tight" aria-hidden>
+          <span className="tally countup" style={{ ["--num" as string]: score }} />
           <span className={cn("text-lg font-medium", light ? "text-white/70" : "text-muted-foreground")}>/100</span>
         </p>
         <p className={cn("text-xs", light ? "text-white/80" : "text-muted-foreground")}>{label}</p>

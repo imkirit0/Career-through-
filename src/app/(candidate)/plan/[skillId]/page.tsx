@@ -47,8 +47,8 @@ export default async function SkillPlanPage({ params }: { params: Promise<{ skil
             <li key={i} className={cn("card-soft p-5", skip && "opacity-70")}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Day {i + 1}{day.topicId ? "" : " · Practical challenge"}</p>
-                <div className="flex items-center gap-2">
-                  {t ? <Chip className="bg-background text-muted-foreground ring-border">Last attempt: {t.correct}/{t.total} on this topic</Chip> : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  {t ?<Chip className="bg-background text-muted-foreground ring-border">Last attempt: {t.correct}/{t.total} on this topic</Chip> : null}
                   {skip ? <Chip className="bg-emerald-50 text-emerald-700 ring-emerald-200"><SkipForward className="size-3" aria-hidden />Already demonstrated — skip</Chip> : done ? <Chip className="bg-secondary text-secondary-foreground ring-transparent"><Check className="size-3" aria-hidden />Practised</Chip> : null}
                   <span className="flex items-center gap-1 text-xs text-muted-foreground"><Clock className="size-3" aria-hidden />{day.minutes} min</span>
                 </div>
@@ -77,7 +77,10 @@ export default async function SkillPlanPage({ params }: { params: Promise<{ skil
           <p className="font-semibold">Final step: prove it</p>
           <p className="mt-1 max-w-xl text-sm text-white/85">Marking days as practised tracks your effort — it does not change your readiness. Only the {skill.name} assessment does. You need {level.target}%.</p>
         </div>
-        <Link href={`/assessment/skill:${skillId}`} className={cn(buttonVariants(), "h-10 bg-white px-5 text-primary hover:bg-white/90")}>Take the assessment <LinkArrow /></Link>
+        <div className="flex flex-wrap items-center gap-4">
+          <Link href={`/practice?skill=${skillId}`} className="text-sm font-medium text-white/90 underline-offset-4 hover:text-white hover:underline">Practise first</Link>
+          <Link href={`/assessment/skill:${skillId}`} className={cn(buttonVariants(), "h-10 bg-white px-5 text-primary hover:bg-white/90")}>Take the assessment <LinkArrow /></Link>
+        </div>
       </div>
     </>
   );

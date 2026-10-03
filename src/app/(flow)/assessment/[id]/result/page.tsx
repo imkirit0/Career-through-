@@ -37,6 +37,10 @@ export default async function ResultPage({ params, searchParams }: { params: Pro
   const capped = readiness.perSkill.filter((p) => p.cappedFrom !== null && Object.keys(score.bySkill).includes(p.skillId));
   const roleSkill = new Map(role.skills.map((s) => [s.skillId, s]));
   const single = def.kind === "skill";
+  // A drill leads with the topics this attempt got wrong, so it is the natural step after a miss.
+  const practiseSkill = impact.remainingGaps.length
+    ? nba?.skillId && impact.remainingGaps.includes(nba.skillId) ? nba.skillId : impact.remainingGaps[0]
+    : null;
 
   return (
     <div className="space-y-5">
@@ -214,6 +218,11 @@ export default async function ResultPage({ params, searchParams }: { params: Pro
 
       <div className="flex flex-wrap gap-3">
         <Link href="/dashboard" className={cn(buttonVariants(), "h-11 px-6 text-base")}>View your updated readiness <LinkArrow /></Link>
+        {practiseSkill ? (
+          <Link href={`/practice/drill?skill=${practiseSkill}`} className={cn(buttonVariants({ variant: "outline" }), "h-11 px-6 text-base")}>
+            Practise what you missed in {skillName(practiseSkill)}
+          </Link>
+        ) : null}
         {def.kind === "final" ? <Link href="/card" className={cn(buttonVariants({ variant: "outline" }), "h-11 px-6 text-base")}>Open Career Card</Link> : null}
       </div>
     </div>
