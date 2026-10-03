@@ -5,6 +5,7 @@ import { BadgeCheck, Clock, Keyboard, Mic, MicOff, Send, Volume2, VolumeX, X } f
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { LogoMark } from "./logo-mark";
 import { Spinner } from "@/components/pending";
 
 export type CallTurn = { speaker: "interviewer" | "candidate"; text: string; promptId?: string; probe?: boolean };
@@ -183,7 +184,7 @@ export function InterviewCall({
   return (
     <div className="card-soft flex flex-1 min-h-[600px] flex-col overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-white/80 bg-white/60 dark:bg-black/40 dark:border-white/10 backdrop-blur-xl rounded-3xl">
       <header className="flex items-center gap-3 border-b border-foreground/5 dark:border-white/10 px-6 py-4 bg-white/40 dark:bg-white/5">
-        <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/10 text-primary dark:text-white dark:bg-primary/20 text-sm font-bold shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)]">CT</span>
+        <span className="grid size-12 shrink-0 place-items-center rounded-full bg-white ring-1 ring-foreground/10 dark:bg-white/10 dark:ring-white/15"><LogoMark className="size-7" /></span>
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 font-bold text-lg">
             {title}
@@ -199,11 +200,11 @@ export function InterviewCall({
             <span
               className={cn(
                 "mt-1 grid size-8 shrink-0 place-items-center rounded-full text-[11px] font-bold shadow-sm",
-                t.speaker === "interviewer" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                t.speaker === "interviewer" ? "bg-white ring-1 ring-foreground/10 dark:bg-white/10 dark:ring-white/15" : "bg-secondary text-secondary-foreground",
               )}
               aria-hidden
             >
-              {t.speaker === "interviewer" ? "CT" : "You"}
+              {t.speaker === "interviewer" ? <LogoMark className="size-5" /> : "You"}
             </span>
             <p
               className={cn(
@@ -224,7 +225,7 @@ export function InterviewCall({
         ) : null}
         {pending ? (
           <div className="flex gap-3">
-            <span className="mt-1 grid size-8 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground shadow-sm" aria-hidden>CT</span>
+            <span className="mt-1 grid size-8 shrink-0 place-items-center rounded-full bg-white shadow-sm ring-1 ring-foreground/10 dark:bg-white/10 dark:ring-white/15" aria-hidden><LogoMark className="size-5" /></span>
             <p className="rounded-[1.5rem] bg-white dark:bg-white/10 px-5 py-5 border border-white/60 dark:border-white/10 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)]">
               <span className="flex gap-1.5" aria-label="Interviewer is thinking">
                 {[0, 1, 2].map((i) => (

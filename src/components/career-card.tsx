@@ -1,8 +1,9 @@
-import { BadgeCheck, FolderGit2, ShieldCheck } from "lucide-react";
+import { BadgeCheck, FolderGit2 } from "lucide-react";
 import { cn } from "cn";
 import type { Role } from "@/content/taxonomy";
 import { CONFIDENCE_LABELS, type EvidenceItem, type Readiness } from "@/lib/readiness";
 import { shortDate } from "@/lib/format";
+import { LogoMark } from "./logo-mark";
 import { Chip, Gauge, LevelBar } from "./bits";
 
 const STATUS_STYLE = { Ready: "bg-emerald-500/10 text-emerald-700 ring-emerald-500/20", Developing: "bg-amber-500/10 text-amber-700 ring-amber-500/20", "Not yet ready": "bg-foreground/5 text-foreground/70 ring-foreground/10" };
@@ -26,7 +27,7 @@ export function CareerCard({ name, headline, role, readiness, evidence, status, 
       
       <header className="relative z-10 grid gap-6 p-7 sm:grid-cols-[1fr_220px] sm:p-9">
         <div className="relative z-10">
-          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-primary/80"><ShieldCheck className="size-4" aria-hidden />Career Through · Verified identity</p>
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-primary/80"><LogoMark className="size-5" />Career Through · Verified identity</p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground/90">{name}</h1>
           {headline ? <p className="mt-1.5 font-medium text-muted-foreground">{headline}</p> : null}
           <p className="mt-6 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70">Target role</p>

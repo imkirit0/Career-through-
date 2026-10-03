@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { LogoMark } from "./logo-mark";
 
 export function Preloader() {
   const [progress, setProgress] = useState(0);
@@ -35,6 +36,7 @@ export function Preloader() {
       transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1], delay: 0.2 }}
     >
       <div className="flex flex-col items-center gap-6">
+        <LogoMark className="h-16 w-auto" />
         <div className="text-7xl font-light tracking-tighter text-foreground font-mono">
           {progress}%
         </div>
