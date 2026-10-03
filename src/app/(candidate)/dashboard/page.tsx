@@ -83,7 +83,15 @@ export default async function DashboardPage() {
       {header}
 
       <div className="space-y-5 2xl:space-y-6">
-        {nba ? <NextMove action={nba} upNext={upNext} formulaVersion={readiness.formulaVersion} /> : null}
+        {nba ? (
+          <NextMove
+            action={nba}
+            upNext={upNext}
+            formulaVersion={readiness.formulaVersion}
+            readiness={{ score: readiness.score, ready: role.readyThreshold }}
+            jobs={{ total: matches.length, unlocked: unlocked.length }}
+          />
+        ) : null}
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2 2xl:gap-6">
           <Panel className="rise" style={{ ["--i" as string]: 3 }} title="Where do I stand?" action={<ReadinessWhy role={role} readiness={readiness} contentVersion={CONTENT_VERSION} />}>
