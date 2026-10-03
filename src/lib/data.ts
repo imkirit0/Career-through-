@@ -110,7 +110,7 @@ export async function recordSnapshot(tx: Tx, userId: string, role: Role, trigger
 
 /** Everything the candidate screens need, in one round of parallel queries. */
 export async function getCandidateState(userId: string, p: Profile, role: Role) {
-  const [live, snapshots, attempts, events, interviews] = await Promise.all([
+  const [live, snapshots, attempts, events, interviews, recent] = await Promise.all([
     liveReadiness(userId, role),
     db
       .select({
@@ -139,6 +139,14 @@ export async function getCandidateState(userId: string, p: Profile, role: Role) 
       .select({ status: interviewResponse.status, score: interviewResponse.score })
       .from(interviewResponse)
       .where(eq(interviewResponse.userId, userId)),
+    // For the activity strip and the streak. ponytail: the newest 200 events, so a streak longer
+    // than those cover is undercounted; count distinct days in SQL if that ever matters.
+    db
+      .select({ eventType: careerEvent.eventType, metadata: careerEvent.metadata, createdAt: careerEvent.createdAt })
+      .from(careerEvent)
+      .where(eq(careerEvent.userId, userId))
+      .orderBy(desc(careerEvent.createdAt))
+      .limit(200),
   ]);
 
   const interview = {
@@ -178,7 +186,7 @@ export async function getCandidateState(userId: string, p: Profile, role: Role) 
 
   const planDone = new Set(events.map((e) => `${e.metadata.skillId}:${e.metadata.day}`));
 
-  return { ...live, snapshots, attempts, completed, baselineDone, hasProject, journey, planDone, interview };
+  return { ...live, snapshots, attempts, completed, baselineDone, hasProject, journey, planDone, interview, recent };
 }
 
 /** Finished drills and mock tests, newest first. History only: practice is never evidence. */

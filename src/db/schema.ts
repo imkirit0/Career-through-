@@ -1,6 +1,8 @@
-import { boolean, index, integer, jsonb, pgTable, real, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, index, integer, jsonb, pgTable, real, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import type { EvidenceItem, Readiness } from "@/lib/readiness";
 import type { AdaptiveScore } from "@/lib/adaptive";
+import type { RoundScore } from "@/lib/arena";
 import type { Impact } from "@/lib/impact";
 import type { ResumeData } from "@/lib/resume-schema";
 
@@ -22,6 +24,8 @@ export const profile = pgTable("profile", {
   confirmedAt: ts("confirmed_at"),
   cardSlug: text("card_slug").unique(),
   cardPublic: boolean("card_public").notNull().default(false),
+  /** Opted out of being named on leaderboards: shown as "Anonymous", rank kept. */
+  leaderboardHidden: boolean("leaderboard_hidden").notNull().default(false),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
@@ -133,4 +137,35 @@ export const careerEvent = pgTable(
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [index("event_user_idx").on(t.userId, t.createdAt)],
+);
+
+/**
+ * One Arena round. The server writes the questions at the start and the result at the end;
+ * `points` is stored and never recomputed, and every leaderboard is a SUM over these rows.
+ */
+export const arenaRound = pgTable(
+  "arena_round",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull(),
+    /** The student's target role when they played: fixes which board the points belong to. */
+    roleId: text("role_id").notNull(),
+    subject: text("subject").notNull(),
+    /** The questions issued, in the order asked. Marking only ever uses these. */
+    questionIds: jsonb("question_ids").$type<string[]>().notNull(),
+    startedAt: ts("started_at").notNull().defaultNow(),
+    finishedAt: ts("finished_at"),
+    answers: jsonb("answers").$type<Record<string, number>>(),
+    correct: integer("correct").notNull().default(0),
+    points: integer("points").notNull().default(0),
+    /** How the points were made up, as scored at the time. */
+    score: jsonb("score").$type<Omit<RoundScore, "marks">>(),
+    scoringVersion: text("scoring_version").notNull(),
+  },
+  (t) => [
+    index("arena_board_idx").on(t.roleId, t.finishedAt),
+    index("arena_user_idx").on(t.userId, t.startedAt),
+    // A student has at most one round open, whatever the app code does.
+    uniqueIndex("arena_one_open_round").on(t.userId).where(sql`${t.finishedAt} is null`),
+  ],
 );

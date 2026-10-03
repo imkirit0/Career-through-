@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronDown, ClipboardCheck, FolderCheck, LockOpen, Target, TrendingUp } from "lucide-react";
+import { ChevronDown, ClipboardCheck, FolderCheck, LockOpen, TrendingUp } from "lucide-react";
 import { cn } from "cn";
 import { buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Chip, EmptyState, Gauge, Panel } from "@/components/bits";
+import { Chip, EmptyState, Panel, ScoreRing } from "@/components/bits";
 import { Journey } from "@/components/journey";
 import { NextMove } from "@/components/next-move";
 import { NextUnlock } from "@/components/next-unlock";
@@ -18,6 +18,8 @@ import { getJob } from "@/content/jobs";
 import { CONFIDENCE_LABELS } from "@/lib/readiness";
 import { getCandidateState, requireCandidate } from "@/lib/data";
 import { shortDate, timeAgo } from "@/lib/format";
+import { describeActivity, localHour, streakDays } from "@/lib/activity";
+import { Greeting, PlanSteps, RecentActivity } from "./parts";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -29,15 +31,7 @@ export default async function DashboardPage() {
   const first = profile.name.split(" ")[0] || "there";
 
   const header = (
-    <header className="mb-8">
-      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
-        <Target className="size-3.5" aria-hidden />
-        {role.title}
-      </p>
-      <h1 className="rise mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-        Welcome back, <span className="text-gradient-primary">{first}</span>
-      </h1>
-    </header>
+    <Greeting hour={localHour()} name={first} roleTitle={role.title} streak={streakDays(state.recent.map((e) => e.createdAt))} />
   );
 
   if (!baselineDone) {
@@ -83,24 +77,16 @@ export default async function DashboardPage() {
       {header}
 
       <div className="space-y-5 2xl:space-y-6">
-        {nba ? (
-          <NextMove
-            action={nba}
-            upNext={upNext}
-            formulaVersion={readiness.formulaVersion}
-            readiness={{ score: readiness.score, ready: role.readyThreshold }}
-            jobs={{ total: matches.length, unlocked: unlocked.length }}
-          />
-        ) : null}
+        {nba ? <NextMove action={nba} upNext={upNext} formulaVersion={readiness.formulaVersion} totalJobs={matches.length} /> : null}
 
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2 2xl:gap-6">
-          <Panel className="rise" style={{ ["--i" as string]: 3 }} title="Where do I stand?" action={<ReadinessWhy role={role} readiness={readiness} contentVersion={CONTENT_VERSION} />}>
-            <Gauge score={readiness.score} label={`${role.title} readiness`} />
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:gap-6">
+          <Panel className="rise" style={{ ["--i" as string]: 3 }} title="Role readiness" action={<ReadinessWhy role={role} readiness={readiness} contentVersion={CONTENT_VERSION} />}>
+            <ScoreRing score={readiness.score} label={`${role.title} readiness`} />
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               <Chip className="bg-secondary text-secondary-foreground ring-transparent">{readiness.band.label}</Chip>
               {delta ? (
-                <Chip className={delta > 0 ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-rose-50 text-rose-700 ring-rose-200"}>
-                  <TrendingUp className="size-3" aria-hidden />{delta > 0 ? "+" : ""}{delta} since last update
+                <Chip className={delta > 0 ? "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30" : "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-500/30"}>
+                  <TrendingUp className="size-3" aria-hidden />{delta > 0 ? "+" : ""}{delta} since last assessment
                 </Chip>
               ) : null}
             </div>
@@ -153,7 +139,25 @@ export default async function DashboardPage() {
           <Panel
             className="rise"
             style={{ ["--i" as string]: 4 }}
-            title={unlock ? "Next unlock" : "Opportunities"}
+            title="Current plan"
+            action={<Link href="/plan" className="text-xs font-medium text-primary hover:underline">View plan →</Link>}
+          >
+            {readiness.nextActions.length ? (
+              <>
+                <PlanSteps steps={readiness.nextActions.slice(0, 5)} />
+                {readiness.nextActions.length > 5 ? (
+                  <p className="mt-3 text-xs text-muted-foreground">Plus {readiness.nextActions.length - 5} more in your plan.</p>
+                ) : null}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nothing queued: every role skill meets its target.</p>
+            )}
+          </Panel>
+
+          <Panel
+            className="rise md:col-span-2 xl:col-span-1"
+            style={{ ["--i" as string]: 5 }}
+            title={unlock ? "Next milestone" : "Opportunities"}
             action={
               <Link href="/jobs" className="text-xs font-medium text-primary hover:underline">
                 {unlocked.length} of {matches.length} unlocked →
@@ -191,9 +195,11 @@ export default async function DashboardPage() {
           </Panel>
         </div>
 
-        <Panel className="rise" style={{ ["--i" as string]: 5 }} title="Your career journey"><Journey stages={journey} /></Panel>
+        <RecentActivity className="rise" style={{ ["--i" as string]: 6 }} items={describeActivity(state.recent, state.attempts).slice(0, 4)} />
 
-        <Tabs defaultValue="gaps" className="rise gap-4" style={{ ["--i" as string]: 6 }}>
+        <Panel className="rise" style={{ ["--i" as string]: 7 }} title="Your career journey"><Journey stages={journey} /></Panel>
+
+        <Tabs defaultValue="gaps" className="rise gap-4" style={{ ["--i" as string]: 8 }}>
           <TabsList aria-label="More detail" className="max-w-full overflow-x-auto">
             <TabsTrigger value="gaps" className="px-3">Skill gaps</TabsTrigger>
             <TabsTrigger value="skills" className="px-3">All skills</TabsTrigger>

@@ -144,6 +144,38 @@ export function Verified({ verified }: { verified: boolean }) {
   );
 }
 
+/** Readiness as a full ring, for the dashboard. Plain SVG, drawn in on first paint. */
+export function ScoreRing({ score, label }: { score: number; label: string }) {
+  const r = 84;
+  const len = 2 * Math.PI * r;
+  return (
+    <div className="relative mx-auto aspect-square w-full max-w-[210px]" role="img" aria-label={`${label}: ${score} out of 100`}>
+      <svg viewBox="0 0 200 200" className="size-full -rotate-90">
+        <circle cx="100" cy="100" r={r} fill="none" strokeWidth="14" className="stroke-primary/15 dark:stroke-primary/20" />
+        <circle
+          cx="100"
+          cy="100"
+          r={r}
+          fill="none"
+          strokeWidth="14"
+          strokeLinecap="round"
+          strokeDasharray={len}
+          strokeDashoffset={len * (1 - score / 100)}
+          style={{ ["--len" as string]: len }}
+          className="arc stroke-primary"
+        />
+      </svg>
+      <div className="absolute inset-0 grid place-content-center px-9 text-center">
+        <p className="text-4xl font-semibold tabular-nums tracking-tight" aria-hidden>
+          <span className="tally countup" style={{ ["--num" as string]: score }} />
+          <span className="text-lg font-medium text-muted-foreground">/100</span>
+        </p>
+        <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 /** Semi-circular readiness gauge. Plain SVG: no chart library needed. */
 export function Gauge({ score, label, light }: { score: number; label: string; light?: boolean }) {
   const r = 80;

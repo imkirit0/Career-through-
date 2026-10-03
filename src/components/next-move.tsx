@@ -1,6 +1,5 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronRight, Lock, LockOpen, Sparkles } from "lucide-react";
+import { ArrowRight, Circle, CircleDot, Code2, Dumbbell, Sparkles, TrendingUp } from "lucide-react";
 import { cn } from "cn";
 import { buttonVariants } from "@/components/ui/button";
 import { getJob } from "@/content/jobs";
@@ -8,77 +7,80 @@ import type { NextAction } from "@/lib/next-action";
 import { Why } from "./why";
 
 /**
- * The single highest-priority action, and what it is worth. Deliberately one CTA: the
- * dashboard's job is to answer "what should I do next", not to offer a menu. The right-hand
- * side draws the answer to "why bother": where the skill, the readiness score and the
- * locked opportunities would be if the target is reached.
+ * The single highest-priority action. Deliberately one main button: the dashboard's job is to
+ * answer "what should I do next", not to offer a menu. The picture on the right is drawn in
+ * CSS, and its floating checklist is the student's real queue of moves.
  */
-export function NextMove({
-  action,
-  upNext,
-  formulaVersion,
-  readiness,
-  jobs,
-}: {
-  action: NextAction;
-  upNext: NextAction[];
-  formulaVersion: string;
-  /** Current readiness score and the score at which the role counts as ready. */
-  readiness: { score: number; ready: number };
-  jobs: { total: number; unlocked: number };
-}) {
+export function NextMove({ action, upNext, formulaVersion, totalJobs }: { action: NextAction; upNext: NextAction[]; formulaVersion: string; totalJobs: number }) {
   const impact = action.impact;
   const unlocks = impact?.unlockedJobIds.map((id) => getJob(id)).filter((j) => j !== undefined) ?? [];
   const i = (n: number) => ({ ["--i" as string]: n });
   const hasLevel = action.current !== null && action.target !== null;
-  // "Current 33% · target 75%" is drawn as a meter, so it is not repeated as a chip.
-  const reasons = action.reasons.filter((r) => !/^current\b/i.test(r));
-
-  // One marker per opportunity: open today, opened by this move, one requirement closer, untouched.
-  const opened = Math.min(unlocks.length, Math.max(jobs.total - jobs.unlocked, 0));
-  const closer = Math.min(Math.max(action.blocksJobs - opened, 0), Math.max(jobs.total - jobs.unlocked - opened, 0));
-  const markers = Array.from({ length: jobs.total }, (_, n) =>
-    n < jobs.unlocked ? "open" : n < jobs.unlocked + opened ? "opened" : n < jobs.unlocked + opened + closer ? "closer" : "locked",
-  );
+  const steps = [action, ...upNext.slice(0, 2)].map((a) => a.title.replace(/^(Improve|Verify) /, ""));
 
   return (
-    <section aria-labelledby="next-move" className="surface-hero relative overflow-hidden rounded-3xl">
-      {/* Soft colour fields, for depth. Decorative only. */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <span className="blob right-[-6%] top-[-40%] size-[360px] bg-white/25" />
-        <span className="blob bottom-[-50%] left-[30%] size-[320px] bg-fuchsia-300/30" style={{ animationDelay: "-6s" }} />
-      </div>
-
-      <div className="relative grid grid-cols-[minmax(0,1fr)] gap-6 p-6 sm:p-7 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] lg:gap-8">
-        <div className="flex flex-col">
-          <p className="rise flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/80" style={i(0)}>
+    <section
+      aria-labelledby="next-move"
+      className="relative overflow-hidden rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/[0.16] via-primary/[0.06] to-background shadow-[0_24px_60px_-36px_oklch(0.5_0.24_290/0.55)]"
+    >
+      <div className="relative grid grid-cols-[minmax(0,1fr)] gap-6 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] xl:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
+        <div>
+          <p className="rise flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary" style={i(0)}>
             <Sparkles className="size-3.5" aria-hidden />
-            Your next move
+            Your next step
           </p>
-          <h2 id="next-move" className="rise mt-2 text-2xl font-semibold tracking-tight sm:text-3xl" style={i(1)}>{action.title}</h2>
-          <p className="rise mt-2 max-w-xl text-sm leading-relaxed text-white/85" style={i(2)}>{action.why}</p>
+          <h2 id="next-move" className="rise mt-2.5 text-3xl font-semibold tracking-tight sm:text-4xl" style={i(1)}>{action.title}</h2>
 
-          {reasons.length ? (
-            <ul className="rise mt-4 flex flex-wrap gap-2 text-xs" style={i(3)}>
-              {reasons.map((r) => (
-                <li key={r} className="rounded-full bg-white/10 px-3 py-1.5 font-medium text-white/90 ring-1 ring-inset ring-white/15">{r}</li>
-              ))}
-            </ul>
-          ) : null}
+          {hasLevel ? (
+            <div className="rise mt-4 max-w-xl" style={i(2)}>
+              <p className="flex items-baseline gap-2">
+                <span className="text-3xl font-semibold tabular-nums text-foreground/70">{action.current}%</span>
+                <ArrowRight className="size-4 self-center text-primary" aria-label="to" />
+                <span className="text-3xl font-semibold tabular-nums text-primary">{action.target}%</span>
+                <span className="text-sm text-muted-foreground">{action.kind === "final" ? "readiness threshold" : "target"}</span>
+              </p>
+              <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-primary/15">
+                <div className="grow-x h-full rounded-full bg-gradient-to-r from-primary to-violet-400" style={{ width: `${Math.min((action.current! / Math.max(action.target!, 1)) * 100, 100)}%` }} />
+              </div>
+            </div>
+          ) : (
+            <p className="rise mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground" style={i(2)}>{action.why}</p>
+          )}
 
-          <div className="rise mt-6 flex flex-wrap items-center gap-x-4 gap-y-3 lg:mt-auto lg:pt-6" style={i(4)}>
-            <Link
-              href={action.href}
-              className={cn(buttonVariants(), "group h-auto min-h-11 max-w-full whitespace-normal bg-white px-6 py-2.5 text-base text-primary shadow-lg shadow-black/10 transition-transform hover:-translate-y-0.5 hover:bg-white")}
-            >
+          <p className="rise mt-4 flex max-w-xl items-start gap-2 text-sm text-foreground/80" style={i(3)}>
+            <TrendingUp className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+            <span>
+              {impact ? (
+                <>
+                  Reaching {impact.to}% adds <span className="font-semibold text-foreground">{impact.deltaScore} readiness point{impact.deltaScore === 1 ? "" : "s"}</span>
+                  {unlocks.length
+                    ? ` and unlocks ${unlocks.map((j) => j.title).join(", ")}`
+                    : action.blocksJobs
+                      ? ` and clears a requirement on ${action.blocksJobs} of ${totalJobs} opportunities`
+                      : ""}
+                  .
+                </>
+              ) : action.kind === "project" ? (
+                "Satisfies the project requirement on opportunities that ask for one, and raises evidence confidence."
+              ) : action.kind === "final" ? (
+                "Issues your Career Card. It re-tests every role skill, so your levels can move either way."
+              ) : (
+                "May unlock opportunities requiring this skill."
+              )}
+            </span>
+          </p>
+
+          <div className="rise mt-6 flex flex-wrap items-center gap-x-5 gap-y-3" style={i(4)}>
+            <Link href={action.href} className={cn(buttonVariants(), "group h-auto min-h-12 max-w-full whitespace-normal px-7 py-3 text-base shadow-lg shadow-primary/25 transition-transform hover:-translate-y-0.5")}>
               {action.action} <ArrowRight className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden />
             </Link>
             {action.skillId ? (
-              <Link href={`/practice?skill=${action.skillId}`} className="text-sm font-medium text-white/90 underline-offset-4 hover:text-white hover:underline">
+              <Link href={`/practice?skill=${action.skillId}`} className="inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:text-primary hover:underline">
+                <Dumbbell className="size-4" aria-hidden />
                 Practise first
               </Link>
             ) : null}
-          <span className="text-white [&_button]:text-white/90 [&_button:hover]:text-white">
+          <span>
             <Why label="Why this?" title="Why this action, ahead of everything else" description={action.why}>
               <div>
                 <p className="mb-2 font-medium">How the order is decided</p>
@@ -114,124 +116,44 @@ export function NextMove({
           </div>
         </div>
 
-        <div className="rise self-start rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-sm" style={i(3)}>
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/70">{impact ? `If you reach ${impact.to}%` : hasLevel ? "Where you are" : "What this does"}</p>
-
-          <div className="mt-4 space-y-5">
-            {!impact ? (
-              <p className="text-sm leading-relaxed text-white/90">
-                {action.kind === "project"
-                  ? "Satisfies the project requirement on opportunities that ask for one, and raises evidence confidence."
-                  : action.kind === "final"
-                    ? "Issues your Career Card. It re-tests every role skill, so your levels can move either way."
-                    : "May unlock opportunities requiring this skill."}
-              </p>
-            ) : null}
-            {hasLevel ? (
-              <Meter
-                label={action.kind === "final" ? "Readiness" : "Skill level"}
-                from={action.current!}
-                to={action.target!}
-                caption={`${Math.max(action.target! - action.current!, 0)} points to go${action.kind === "final" ? " to the readiness threshold" : ""}`}
-              />
-            ) : null}
-
-            {impact ? (
-              <Meter
-                label="Role readiness"
-                from={readiness.score}
-                to={Math.min(readiness.score + impact.deltaScore, 100)}
-                mark={readiness.ready}
-                caption={`+${impact.deltaScore} point${impact.deltaScore === 1 ? "" : "s"} · the line marks job-ready at ${readiness.ready}%`}
-              />
-            ) : null}
-
-            {jobs.total ? (
-              <div>
-                <p className="text-sm font-medium text-white/85">Opportunities</p>
-                <ul className="mt-2 flex flex-wrap gap-1.5" aria-hidden>
-                  {markers.map((m, n) => (
-                    <li
-                      key={n}
-                      className={cn(
-                        "grid size-8 place-items-center rounded-full",
-                        m === "open" && "bg-white text-primary",
-                        m === "opened" && "bg-emerald-300 text-emerald-950",
-                        m === "closer" && "bg-white/20 text-white ring-2 ring-inset ring-white/70",
-                        m === "locked" && "bg-white/10 text-white/50",
-                      )}
-                    >
-                      {m === "open" || m === "opened" ? <LockOpen className="size-3.5" /> : <Lock className="size-3.5" />}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-1.5 text-xs text-white/70">
-                  {opened
-                    ? `Unlocks ${opened} of ${jobs.total}: ${unlocks.slice(0, opened).map((j) => j.title).join(", ")}${closer ? `. Clears this requirement on ${closer} more.` : ""}`
-                    : !action.blocksJobs
-                      ? `No opportunity unlocks from this one alone. ${jobs.unlocked} of ${jobs.total} open today.`
-                      : impact
-                        ? `Clears this requirement on ${action.blocksJobs} of ${jobs.total}. Each still needs its other requirements.`
-                        : `${action.blocksJobs} of ${jobs.total} ask for this. ${jobs.unlocked} open today.`}
-                </p>
-              </div>
-            ) : null}
-
+        {/* A desk scene in CSS: an editor window, with the queue of moves floating beside it. */}
+        <div className="relative hidden min-h-60 lg:block">
+          <div aria-hidden className="absolute right-4 top-1/2 h-52 w-80 -translate-y-1/2 rounded-full bg-primary/25 blur-3xl" />
+          <div aria-hidden className="float absolute bottom-0 left-0 w-[64%] -rotate-3 rounded-2xl bg-slate-900 p-4 shadow-2xl shadow-primary/30 ring-1 ring-white/10" style={i(1)}>
+            <div className="flex gap-1.5">
+              <span className="size-2.5 rounded-full bg-rose-400" />
+              <span className="size-2.5 rounded-full bg-amber-400" />
+              <span className="size-2.5 rounded-full bg-emerald-400" />
+            </div>
+            <div className="mt-4 space-y-2.5">
+              <div className="flex gap-2"><span className="h-2 w-10 rounded-full bg-violet-400" /><span className="h-2 w-20 rounded-full bg-slate-500" /></div>
+              <div className="flex gap-2 pl-4"><span className="h-2 w-14 rounded-full bg-sky-400" /><span className="h-2 w-10 rounded-full bg-slate-600" /><span className="h-2 w-8 rounded-full bg-emerald-400" /></div>
+              <div className="flex gap-2 pl-4"><span className="h-2 w-8 rounded-full bg-violet-400" /><span className="h-2 w-24 rounded-full bg-slate-600" /></div>
+              <div className="flex gap-2 pl-8"><span className="h-2 w-16 rounded-full bg-amber-300" /><span className="h-2 w-10 rounded-full bg-slate-500" /></div>
+              <div className="flex gap-2 pl-4"><span className="h-2 w-12 rounded-full bg-sky-400" /></div>
+              <div className="flex gap-2"><span className="h-2 w-6 rounded-full bg-violet-400" /></div>
+            </div>
+            <span className="absolute -right-4 -top-4 grid size-11 place-items-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/40">
+              <Code2 className="size-5" />
+            </span>
           </div>
+          <ol aria-label="Your next steps" className="absolute right-2 top-3 w-[60%] space-y-2.5">
+            {steps.map((label, n) => (
+              <li
+                key={`${n}-${label}`}
+                className={cn(
+                  "float flex items-center gap-2 rounded-xl border bg-card/90 px-3 py-2.5 text-xs font-medium shadow-lg shadow-primary/10 backdrop-blur",
+                  n === 0 ? "border-primary/40 text-foreground" : "border-foreground/10 text-foreground/75",
+                )}
+                style={{ ...i(n + 2), marginLeft: n * 14 }}
+              >
+                {n === 0 ? <CircleDot className="size-4 shrink-0 text-primary" aria-hidden /> : <Circle className="size-4 shrink-0 text-muted-foreground/50" aria-hidden />}
+                <span className="truncate">{label}</span>
+              </li>
+            ))}
+          </ol>
         </div>
       </div>
-
-      {upNext.length ? (
-        <ol className="relative flex flex-wrap items-center gap-x-2 gap-y-2 border-t border-white/15 bg-black/10 px-6 py-3.5 text-xs text-white/85 sm:px-7">
-          <li className="mr-1 font-semibold uppercase tracking-wider text-white/70">Your path</li>
-          <li><Step n={1} current>This move</Step></li>
-          {upNext.slice(0, 3).map((a, n) => (
-            <li key={a.id} className="rise flex items-center gap-2" style={i(6 + n)}>
-              <ChevronRight className="size-3.5 text-white/50" aria-hidden />
-              <Step n={n + 2}>{a.title}</Step>
-            </li>
-          ))}
-        </ol>
-      ) : null}
     </section>
-  );
-}
-
-/** A track filled to where things are now, hatched out to where they would be. */
-function Meter({ label, from, to, mark, caption }: { label: string; from: number; to: number; mark?: number; caption: string }) {
-  return (
-    <div>
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="text-sm font-medium text-white/85">{label}</p>
-        <p className="flex items-baseline gap-1.5 tabular-nums">
-          <span className="text-sm text-white/70">{from}%</span>
-          <ArrowRight className="size-3.5 self-center text-white/60" aria-label="to" />
-          <span className="text-xl font-semibold">{to}%</span>
-        </p>
-      </div>
-      <div className="relative mt-2 h-2.5 rounded-full bg-white/15">
-        <div
-          className="absolute inset-y-0 rounded-full"
-          style={{
-            left: 0,
-            width: `${Math.min(to, 100)}%`,
-            backgroundImage: "repeating-linear-gradient(135deg, rgb(255 255 255 / 0.5) 0 4px, rgb(255 255 255 / 0.18) 4px 8px)",
-          }}
-          aria-hidden
-        />
-        <div className="grow-x relative h-full rounded-full bg-white" style={{ width: `${Math.min(from, 100)}%` }} />
-        {mark !== undefined ? <div className="absolute -top-1 h-4.5 w-0.5 rounded bg-white" style={{ left: `${mark}%` }} aria-hidden /> : null}
-      </div>
-      <p className="mt-1.5 text-xs text-white/70">{caption}</p>
-    </div>
-  );
-}
-
-function Step({ n, current, children }: { n: number; current?: boolean; children: ReactNode }) {
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1", current ? "bg-white font-semibold text-primary" : "bg-white/10 ring-1 ring-inset ring-white/15")}>
-      <span className={cn("grid size-4 place-items-center rounded-full text-[10px] font-semibold tabular-nums", current ? "bg-primary text-white" : "bg-white/20")}>{n}</span>
-      {children}
-    </span>
   );
 }

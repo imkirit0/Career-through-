@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cn } from "cn";
-import { BriefcaseBusiness, Code2, FolderGit2, GraduationCap, Mail, Target, User } from "lucide-react";
+import { BriefcaseBusiness, Code2, FolderGit2, GraduationCap, Mail, Target, Trophy, User } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Chip, PageHeader, Panel } from "@/components/bits";
 import { requireCandidate } from "@/lib/data";
 import { shortDate } from "@/lib/format";
+import { displayName } from "@/lib/arena";
+import { SubmitButton } from "@/components/pending";
+import { setLeaderboardVisibility } from "../../actions";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -136,6 +139,28 @@ export default async function ProfilePage() {
             {!r?.experience.length && !r?.projects.length ? (
               <p className="text-sm font-medium text-muted-foreground">Nothing added.</p>
             ) : null}
+          </div>
+        </Panel>
+
+        <Panel title="Arena leaderboard" className="lg:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Trophy className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden />
+              <div>
+                <p className="font-medium">
+                  {profile.leaderboardHidden ? "You appear as “Anonymous”" : `You appear as “${displayName(profile.name, false)}”`}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {profile.leaderboardHidden
+                    ? "Your rank and points still count; other students just can't see whose they are."
+                    : "Other students with your target role see this name next to your rank and points, nothing else."}
+                </p>
+              </div>
+            </div>
+            <form action={setLeaderboardVisibility}>
+              <input type="hidden" name="hidden" value={String(!profile.leaderboardHidden)} />
+              <SubmitButton variant="outline" className="h-9 px-4" pendingLabel="Updating…">{profile.leaderboardHidden ? "Show my name" : "Hide my name"}</SubmitButton>
+            </form>
           </div>
         </Panel>
       </div>

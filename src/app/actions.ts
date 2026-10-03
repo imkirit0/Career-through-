@@ -12,6 +12,9 @@ import type { Question, Role } from "@/content/taxonomy";
 import { getAssessment } from "@/content/assessments";
 import { getPracticeQuestion } from "@/content/practice";
 import { getChallenge } from "@/content/challenges";
+import { isArenaSubject } from "@/content/arena";
+import { ROUND } from "@/lib/arena";
+import { finishRound, startRound } from "@/lib/arena-data";
 import { markPractice } from "@/lib/practice";
 import { getPlan } from "@/content/plans";
 import { jobsForRole } from "@/content/jobs";
@@ -596,6 +599,43 @@ export async function completeChallenge(input: unknown): Promise<{ ok: true } | 
   if (!challenge || !role.skills.some((s) => s.skillId === challenge.skillId)) return { error: "That challenge could not be found." };
   await logEvent(user.id, "CODE_CHALLENGE_PASSED", { challengeId: challenge.id, skillId: challenge.skillId });
   return { ok: true };
+}
+
+// ── Arena ──────────────────────────────────────────────────────
+
+/** Deal a round (or rejoin the one in progress) and go to it. */
+export async function startArenaRound(form: FormData) {
+  const subject = String(form.get("subject") ?? "");
+  if (!isArenaSubject(subject)) return;
+  const { user, role } = await requireCandidate();
+  const { id } = await startRound(user.id, role.id, subject);
+  redirect(`/arena/play/${id}`);
+}
+
+const arenaFinishInput = z.object({
+  roundId: z.string().uuid(),
+  answers: z.record(z.string().max(40), z.number().int().min(0).max(3)).refine((a) => Object.keys(a).length <= ROUND.count),
+});
+
+/**
+ * Hand in a round. The browser sends only its choices: which questions were asked, how long
+ * it took and what it is worth are all decided on the server (src/lib/arena-data.ts).
+ */
+export async function finishArenaRound(input: unknown): Promise<{ error: string } | { ok: true }> {
+  const parsed = arenaFinishInput.safeParse(input);
+  if (!parsed.success) return { error: "That round was not valid." };
+  const { user } = await requireCandidate();
+  const done = await finishRound(user.id, parsed.data.roundId, parsed.data.answers);
+  if (!done) return { error: "That round could not be found." };
+  revalidatePath("/arena");
+  return { ok: true };
+}
+
+export async function setLeaderboardVisibility(form: FormData) {
+  const { user } = await requireCandidate();
+  await db.update(profile).set({ leaderboardHidden: form.get("hidden") === "true" }).where(eq(profile.userId, user.id));
+  revalidatePath("/profile");
+  revalidatePath("/arena");
 }
 
 // ── Plan ───────────────────────────────────────────────────────

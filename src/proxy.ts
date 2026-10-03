@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PROTECTED = ["/dashboard", "/onboarding", "/assessment", "/assessments", "/plan", "/evidence", "/jobs", "/card", "/profile"];
+const PROTECTED = ["/dashboard", "/onboarding", "/assessment", "/assessments", "/plan", "/arena", "/evidence", "/jobs", "/card", "/profile"];
 
 // Refreshes the Supabase session cookie and keeps signed-out users out of candidate routes.
 // Pages still call requireUser(): this is the first gate, not the only one.
