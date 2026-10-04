@@ -123,7 +123,8 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
         <li>• Questions adapt: get one right and the next is harder, get one wrong and it steps back. Harder questions are worth more, and you cannot return to a previous one.</li>
         <li>• Skipped questions are marked wrong.</li>
         <li>• The interview that follows is written, not timed. It is recorded as evidence of how you explain your work.</li>
-        <li>• Tab switches are recorded. More than {MAX_TAB_SWITCHES}, or finishing more than {GRACE_SECONDS}s late, and the result is recorded but not marked verified.</li>
+        <li>• Tab switches are recorded. More than {MAX_TAB_SWITCHES} and the result is recorded but not marked verified.</li>
+        <li>• An answer sent more than {GRACE_SECONDS}s after the clock runs out is not accepted, and an attempt that runs out of time is not scored.</li>
       </ul>
 
       {blocked ? (

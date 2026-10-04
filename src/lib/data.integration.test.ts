@@ -42,15 +42,15 @@ describe.skipIf(!url)("data layer against Postgres", () => {
       return recordSnapshot(tx, userId, role, "baseline:test");
     });
     expect(second.before?.score).toBe(first.after.score);
-    // Knowledge alone is capped: a perfect paper cannot claim industry readiness on its own.
-    expect(second.after.score).toBeLessThanOrEqual(84);
+    // Knowledge alone is capped per skill: a perfect paper holds every skill at 84, not above.
+    expect(second.after.perSkill.every((p) => p.level === 84 && p.cappedFrom === 100)).toBe(true);
     expect(second.after.score).toBeGreaterThan(50);
 
     const [p] = await db.select().from(profile).where(eq(profile.userId, userId));
     const state = await getCandidateState(userId, p, role);
     expect(state.readiness.score).toBe(second.after.score);
     expect(state.snapshots).toHaveLength(2);
-    expect(state.snapshots[1]).toMatchObject({ formulaVersion: "readiness-v1", contentVersion: CONTENT_VERSION });
+    expect(state.snapshots[1]).toMatchObject({ formulaVersion: "readiness-v2", contentVersion: CONTENT_VERSION });
     // No project yet → project-gated jobs stay locked, the rest unlock.
     expect(state.matches.some((m) => m.unlocked)).toBe(true);
     expect(state.matches.filter((m) => !m.unlocked).every((m) => m.blockers.some((b) => b.kind === "project"))).toBe(true);

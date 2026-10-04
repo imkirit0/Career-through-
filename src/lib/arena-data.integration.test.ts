@@ -52,6 +52,8 @@ describe.skipIf(!url)("arena rounds against Postgres", () => {
     const { id } = await startRound(user, "role-finish", "python");
     const round = (await getRound(user, id))!;
     const answers = await rightAnswers("python", round.questions.map((q) => q.id));
+    // A minute into the round, so it is a believable pace.
+    await db.update(arenaRound).set({ startedAt: sql`now() - interval '60 seconds'` }).where(eq(arenaRound.id, id));
 
     // Five submissions at once: one with the right answers, the rest trying to overwrite it.
     const results = await Promise.all([finishRound(user, id, answers), ...Array.from({ length: 4 }, () => finishRound(user, id, {}))]);
@@ -75,12 +77,8 @@ describe.skipIf(!url)("arena rounds against Postgres", () => {
     expect(board.you?.points ?? 0).toBe(row.points);
     expect(board.you?.rounds ?? (row.points ? 0 : 1)).toBe(1);
 
-    // If the correct submission won the race, the stored points are what the rules give for a
-    // round finished within a moment of starting (the speed bonus rounds 47.5 either way).
-    if (row.correct === 10) {
-      expect(row.points).toBeGreaterThanOrEqual(scoreRound(round.questions, answers, 1).points);
-      expect(row.points).toBeLessThanOrEqual(scoreRound(round.questions, answers, 0).points);
-    }
+    // If the correct submission won the race, the stored points are exactly what the rules give.
+    if (row.correct === 10) expect(row.points).toBe(scoreRound(round.questions, answers, 60).points);
   });
 
   it("marks a full-marks round as the rules say, using the server's clock", async () => {
@@ -93,8 +91,8 @@ describe.skipIf(!url)("arena rounds against Postgres", () => {
     const done = (await finishRound(user, id, await rightAnswers("python", round.questions.map((q) => q.id))))!;
     expect(done.correct).toBe(10);
     expect(done.score).toMatchObject({ base: 190, penalty: 0, streak: 45, late: false });
-    expect(done.score!.speed).toBeGreaterThanOrEqual(23);
-    expect(done.score!.speed).toBeLessThanOrEqual(24);
+    expect(done.score!.speed).toBeGreaterThanOrEqual(39);
+    expect(done.score!.speed).toBeLessThanOrEqual(40);
     expect(done.points).toBe(190 + 45 + done.score!.speed);
   });
 
@@ -114,6 +112,56 @@ describe.skipIf(!url)("arena rounds against Postgres", () => {
     const late = (await finishRound(user, id, answers))!;
     expect(late).toMatchObject({ points: 0, correct: 10 });
     expect(late.score).toMatchObject({ late: true });
+  });
+
+  it("ranks three rounds a subject a day; later ones are practice and stay off the board", async () => {
+    const { db, arenaRound, startRound, getRound, finishRound, getBoard, getRankedLeft, ROUND } = await load();
+    const role = `role-limit-${randomUUID()}`;
+    const user = await newStudent("Daily Limit", role);
+    const dealt: string[][] = [];
+    const play = async (subject: "python" | "dbms", finish = true) => {
+      const { id } = await startRound(user, role, subject);
+      const round = (await getRound(user, id))!;
+      dealt.push(round.questions.map((q) => q.id));
+      await db.update(arenaRound).set({ startedAt: sql`now() - interval '90 seconds'` }).where(eq(arenaRound.id, id));
+      const { loadBank } = await load();
+      const { byId } = await loadBank(subject);
+      const answers = Object.fromEntries(round.questions.map((q) => [q.id, byId.get(q.id)!.answer]));
+      return finish ? (await finishRound(user, id, answers))! : (await finishRound(user, id, {}))!;
+    };
+
+    expect((await getRankedLeft(user)).python).toBe(ROUND.rankedPerSubjectPerDay);
+    const first = await play("python");
+    await play("python", false); // dealt and handed in empty: it still uses one of the day's rounds
+    const third = await play("python");
+    expect((await getRankedLeft(user)).python).toBe(0);
+    const before = await getBoard(role, null, user);
+    expect(before.you).toMatchObject({ points: first.points + third.points, rounds: 3 });
+
+    const fourth = await play("python");
+    expect(fourth.points, "a practice round puts nothing on the board").toBe(0);
+    expect(fourth.score).toMatchObject({ practice: true, correct: 10 });
+    expect(fourth.score!.earned).toBe(first.points);
+    expect(await getBoard(role, null, user)).toEqual(before);
+
+    // The limit is per subject: another subject is still ranked today.
+    expect((await getRankedLeft(user)).dbms).toBe(ROUND.rankedPerSubjectPerDay);
+    expect((await play("dbms")).points).toBeGreaterThan(0);
+
+    // No question was dealt twice across the four Python rounds.
+    const python = dealt.slice(0, 4).flat();
+    expect(new Set(python).size).toBe(python.length);
+  });
+
+  it("voids a round when the browser reports the tab was left too often", async () => {
+    const { db, arenaRound, startRound, getRound, finishRound } = await load();
+    const user = await newStudent("Left Tab", "role-tab");
+    const { id } = await startRound(user, "role-tab", "python");
+    const round = (await getRound(user, id))!;
+    await db.update(arenaRound).set({ startedAt: sql`now() - interval '90 seconds'` }).where(eq(arenaRound.id, id));
+    const done = (await finishRound(user, id, await rightAnswers("python", round.questions.map((q) => q.id)), 3))!;
+    expect(done).toMatchObject({ points: 0, correct: 10 });
+    expect(done.score).toMatchObject({ voided: "left_tab", tabSwitches: 3 });
   });
 
   it("closes an abandoned round at zero when the student starts again", async () => {

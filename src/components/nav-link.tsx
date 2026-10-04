@@ -14,6 +14,8 @@ export function NavLink({ href, label, icon, compact }: { href: string; label?: 
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
+      // Lets the dashboard tour point at this item.
+      data-tour={`nav${href.replace(/\W+/g, "-")}`}
       className={cn(
         "group flex items-center gap-4 rounded-xl transition-all duration-200 focus-visible:outline-2 focus-visible:outline-primary/50 relative overflow-hidden",
         compact ? "p-2" : "px-4 py-3.5",

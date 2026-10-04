@@ -8,7 +8,9 @@ export type ArenaQuestion = { id: string; topic: string; difficulty: Difficulty;
 export type ArenaPublicQuestion = Omit<ArenaQuestion, "answer" | "explanation">;
 
 /** Stored on every round. Change it whenever a number below changes: old rounds keep their points. */
-export const SCORING_VERSION = "arena-v1";
+export const SCORING_VERSION = "arena-v2";
+/** Suffix on a round's scoring version when it was dealt past the day's ranked limit. */
+export const PRACTICE_SUFFIX = ":practice";
 
 export const ROUND = {
   seconds: 300,
@@ -17,6 +19,18 @@ export const ROUND = {
   /** Questions per difficulty. Fixed, so every round has the same maximum. */
   mix: { 1: 3, 2: 5, 3: 2 } as Record<Difficulty, number>,
   count: 10,
+  /**
+   * Ranked rounds per subject per day (India time). Every round dealt counts, finished or
+   * not, so a bad deal cannot be thrown away for a better one, and the board rewards how
+   * well someone plays rather than how many hours they can spend. Later rounds are practice.
+   */
+  rankedPerSubjectPerDay: 3,
+  /** Nobody reads and answers a question faster than this on average; a round that does is void. */
+  minSecondsPerAnswer: 3,
+  /** Leaving the tab more often than this during a round makes it void. Reported by the browser, so a deterrent, not a proof. */
+  maxTabSwitches: 2,
+  /** Finishing within this long earns the whole speed bonus: being faster than a person can be earns nothing extra. */
+  speedFullWithinSeconds: 120,
 } as const;
 
 export const POINTS = {
@@ -32,14 +46,18 @@ export const POINTS = {
 } as const;
 
 /**
- * Deal a round: the fixed mix of difficulties, no question twice, easy first.
- * `rand` is injectable so the deal can be tested.
+ * Deal a round: the fixed mix of difficulties, no question twice, easy first, and none the
+ * student has been dealt before (`seen`) while the bank still has others. `rand` is
+ * injectable so the deal can be tested.
  */
-export function pickRound(bank: ArenaQuestion[], rand: () => number = Math.random): ArenaQuestion[] {
+export function pickRound(bank: ArenaQuestion[], rand: () => number = Math.random, seen: ReadonlySet<string> = new Set()): ArenaQuestion[] {
   const round: ArenaQuestion[] = [];
   for (const d of [1, 2, 3] as const) {
-    const pool = bank.filter((q) => q.difficulty === d);
-    if (pool.length < ROUND.mix[d]) throw new Error(`The bank has ${pool.length} questions at difficulty ${d}; a round needs ${ROUND.mix[d]}.`);
+    const tier = bank.filter((q) => q.difficulty === d);
+    if (tier.length < ROUND.mix[d]) throw new Error(`The bank has ${tier.length} questions at difficulty ${d}; a round needs ${ROUND.mix[d]}.`);
+    // Fresh questions first. Once a student has been through a whole tier, it starts over.
+    const fresh = tier.filter((q) => !seen.has(q.id));
+    const pool = fresh.length >= ROUND.mix[d] ? fresh : tier;
     // Partial Fisher-Yates: the first mix[d] slots end up holding distinct random questions.
     for (let i = 0; i < ROUND.mix[d]; i++) {
       const j = i + Math.floor(rand() * (pool.length - i));
@@ -61,6 +79,14 @@ export type RoundScore = {
   speed: number;
   /** Submitted after the clock plus grace: the round is void. */
   late: boolean;
+  /** Why the round earned nothing, when a rule voided it. Absent on rounds scored before arena-v2. */
+  voided?: "late" | "too_fast" | "left_tab" | null;
+  tabSwitches?: number;
+  /** What the answers were worth. Equals `points` unless this was a practice round. */
+  earned?: number;
+  /** Dealt after the day's ranked rounds for the subject were used: it does not count on the board. */
+  practice?: boolean;
+  /** What counts on the leaderboard. */
   points: number;
   marks: { id: string; choice: number | null; correct: boolean }[];
 };
@@ -69,8 +95,9 @@ export type RoundScore = {
  * Score a round. `questions` are the ones the server issued, in the order asked; `answers`
  * is whatever the browser sent and is not trusted: unknown ids are ignored and anything
  * that is not a valid option index counts as skipped. `elapsedSeconds` is server time.
+ * `tabSwitches` is the browser's own count of how often the student left the tab.
  */
-export function scoreRound(questions: ArenaQuestion[], answers: Record<string, unknown>, elapsedSeconds: number): RoundScore {
+export function scoreRound(questions: ArenaQuestion[], answers: Record<string, unknown>, elapsedSeconds: number, tabSwitches = 0): RoundScore {
   const seen = new Set<string>();
   const asked = questions.filter((q) => !seen.has(q.id) && seen.add(q.id));
   let base = 0;
@@ -97,15 +124,30 @@ export function scoreRound(questions: ArenaQuestion[], answers: Record<string, u
   });
 
   const late = !(elapsedSeconds <= ROUND.seconds + ROUND.graceSeconds);
-  const left = Math.min(Math.max((ROUND.seconds - elapsedSeconds) / ROUND.seconds, 0), 1);
-  const speed = correct >= POINTS.speedMinCorrect ? Math.round(base * POINTS.speedShare * left) : 0;
-  const points = late ? 0 : Math.max(base - penalty + streak + speed, 0);
-  return { correct, wrong, skipped: asked.length - correct - wrong, base, penalty, streak, speed: late ? 0 : speed, late, points, marks };
+  const switches = Number.isInteger(tabSwitches) && tabSwitches > 0 ? tabSwitches : 0;
+  const voided = late
+    ? "late"
+    : elapsedSeconds < ROUND.minSecondsPerAnswer * (correct + wrong)
+      ? "too_fast"
+      : switches > ROUND.maxTabSwitches
+        ? "left_tab"
+        : null;
+  // The bonus is full for anything within speedFullWithinSeconds and falls to nothing at the clock.
+  const left = Math.min(Math.max((ROUND.seconds - elapsedSeconds) / (ROUND.seconds - ROUND.speedFullWithinSeconds), 0), 1);
+  const speed = !voided && correct >= POINTS.speedMinCorrect ? Math.round(base * POINTS.speedShare * left) : 0;
+  const points = voided ? 0 : Math.max(base - penalty + streak + speed, 0);
+  return { correct, wrong, skipped: asked.length - correct - wrong, base, penalty, streak, speed, late, voided, tabSwitches: switches, earned: points, points, marks };
 }
 
 // ponytail: India has one time zone and no daylight saving, so a fixed offset is exact.
 const IST_OFFSET_MS = 5.5 * 3_600_000;
 const DAY_MS = 86_400_000;
+
+/** Midnight (India time) of the day `now` is in. The daily ranked rounds reset here. */
+export function dayStart(now = new Date()): Date {
+  const local = new Date(now.getTime() + IST_OFFSET_MS);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - IST_OFFSET_MS);
+}
 
 /** The Monday 00:00 (India time) that starts the week `now` is in. The weekly board resets here. */
 export function weekStart(now = new Date()): Date {

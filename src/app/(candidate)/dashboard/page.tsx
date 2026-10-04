@@ -20,6 +20,7 @@ import { getCandidateState, requireCandidate } from "@/lib/data";
 import { shortDate, timeAgo } from "@/lib/format";
 import { describeActivity, localHour, streakDays } from "@/lib/activity";
 import { Greeting, PlanSteps, RecentActivity } from "./parts";
+import { Tour, type TourStep } from "@/components/tour";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -30,15 +31,40 @@ export default async function DashboardPage() {
   const baselineHref = `/assessment/${encodeURIComponent(`baseline:${role.id}`)}`;
   const first = profile.name.split(" ")[0] || "there";
 
+  // What each part of the platform is for, in the order a student meets it. Steps whose
+  // section is not on the page (the cards before a baseline, say) are left out by the tour.
+  const tour: TourStep[] = [
+    { id: "welcome", title: `Welcome, ${first}`, body: "This is a one-minute tour of your dashboard and what each section is for. You can replay it any time with the tour button." },
+    { id: "journey", target: "#tour-journey", title: "Your career journey", body: "The stages from choosing a role to holding a Career Card. The highlighted stage is where you are now." },
+    { id: "baseline", target: "#tour-baseline", title: "Start here", body: `The baseline assessment measures every ${role.title} skill, so we can show your real starting point and what to work on first.` },
+    { id: "next-step", target: "[data-tour=next-step]", title: "Your next step", body: "Always the single most useful thing to do now. If you only look at one part of this page, look here." },
+    { id: "readiness", target: "#tour-readiness", title: "Role readiness", body: `How close you are to ready for ${role.title}, out of 100. It only moves when you prove something in an assessment or a project, never from studying alone.` },
+    { id: "plan", target: "#tour-plan", title: "Current plan", body: "The skills to work on, in order, with your level in each. The first one is what your next step is about." },
+    { id: "milestone", target: "#tour-milestone", title: "Next milestone", body: "The closest opportunity you can unlock, and exactly what it still needs from you." },
+    { id: "activity", target: "#tour-activity", title: "Recent activity", body: "What you have done lately. Doing something on consecutive days builds your streak." },
+    { id: "nav-plan", target: "[data-tour=nav-plan]", title: "My Plan", body: "A day-by-day study plan for each skill you need to improve." },
+    { id: "nav-practice", target: "[data-tour=nav-practice]", title: "Practice", body: "Drills, mock tests, interview rehearsal and code challenges. Nothing here counts against you, so it is the place to get things wrong." },
+    { id: "nav-arena", target: "[data-tour=nav-arena]", title: "Arena", body: `Timed quiz rounds against other ${role.title} students, with a weekly leaderboard. It never changes your readiness.` },
+    { id: "nav-assessments", target: "[data-tour=nav-assessments]", title: "Assessments", body: "Timed tests marked on the server. These are what prove a skill and move your readiness." },
+    { id: "nav-evidence", target: "[data-tour=nav-evidence]", title: "Evidence", body: "Everything that backs up your skills: assessment results, projects, and what you listed on your resume." },
+    { id: "nav-jobs", target: "[data-tour=nav-jobs]", title: "Jobs", body: "Opportunities that unlock as your readiness and skills reach what each one asks for." },
+    { id: "nav-card", target: "[data-tour=nav-card]", title: "Career Card", body: "Your verified profile to share with recruiters. It is issued after your final verification." },
+    { id: "nav-profile", target: "[data-tour=nav-profile]", title: "Profile", body: "Your details, your resume and your target role." },
+    { id: "done", title: "You're set", body: baselineDone ? "Start with your next step at the top of the dashboard." : "Start with the baseline assessment: everything else builds on it." },
+  ];
+
   const header = (
-    <Greeting hour={localHour()} name={first} roleTitle={role.title} streak={streakDays(state.recent.map((e) => e.createdAt))} />
+    <Greeting hour={localHour()} name={first} roleTitle={role.title} streak={streakDays(state.recent.map((e) => e.createdAt))}>
+      <Tour steps={tour} storageKey="ct:tour:dashboard" />
+    </Greeting>
   );
 
   if (!baselineDone) {
     return (
       <>
         {header}
-        <Panel title="Your career journey" className="mb-5"><Journey stages={journey} /></Panel>
+        <Panel id="tour-journey" title="Your career journey" className="mb-5"><Journey stages={journey} /></Panel>
+        <div id="tour-baseline">
         <EmptyState
           icon={ClipboardCheck}
           title="Take your baseline to see how ready you are"
@@ -46,6 +72,7 @@ export default async function DashboardPage() {
           href={baselineHref}
           cta="Start baseline assessment"
         />
+        </div>
       </>
     );
   }
@@ -80,7 +107,7 @@ export default async function DashboardPage() {
         {nba ? <NextMove action={nba} upNext={upNext} formulaVersion={readiness.formulaVersion} totalJobs={matches.length} /> : null}
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:gap-6">
-          <Panel className="rise" style={{ ["--i" as string]: 3 }} title="Role readiness" action={<ReadinessWhy role={role} readiness={readiness} contentVersion={CONTENT_VERSION} />}>
+          <Panel id="tour-readiness" className="rise" style={{ ["--i" as string]: 3 }} title="Role readiness" action={<ReadinessWhy role={role} readiness={readiness} contentVersion={CONTENT_VERSION} />}>
             <ScoreRing score={readiness.score} label={`${role.title} readiness`} />
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               <Chip className="bg-secondary text-secondary-foreground ring-transparent">{readiness.band.label}</Chip>
@@ -139,6 +166,7 @@ export default async function DashboardPage() {
           <Panel
             className="rise"
             style={{ ["--i" as string]: 4 }}
+            id="tour-plan"
             title="Current plan"
             action={<Link href="/plan" className="text-xs font-medium text-primary hover:underline">View plan →</Link>}
           >
@@ -157,6 +185,7 @@ export default async function DashboardPage() {
           <Panel
             className="rise md:col-span-2 xl:col-span-1"
             style={{ ["--i" as string]: 5 }}
+            id="tour-milestone"
             title={unlock ? "Next milestone" : "Opportunities"}
             action={
               <Link href="/jobs" className="text-xs font-medium text-primary hover:underline">

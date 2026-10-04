@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { POINTS, ROUND, displayName, pickRound, rankRows, scoreRound, weekStart, type ArenaQuestion, type Difficulty } from "./arena";
+import { POINTS, ROUND, dayStart, displayName, pickRound, rankRows, scoreRound, weekStart, type ArenaQuestion, type Difficulty } from "./arena";
 
 const q = (id: string, difficulty: Difficulty, answer = 0): ArenaQuestion => ({ id, topic: "t", difficulty, prompt: "p", options: ["a", "b", "c", "d"], answer, explanation: "e" });
 // A dealt round: 3 easy, 5 medium, 2 hard, every answer is option 0.
@@ -14,13 +14,31 @@ describe("scoreRound", () => {
     expect(s).toMatchObject({ correct: 10, wrong: 0, skipped: 0, base: BASE, penalty: 0, streak: 9 * POINTS.streak, speed: 0, late: false, points: BASE + 45 });
   });
 
-  it("a perfect round finished instantly earns the full speed share", () => {
-    expect(scoreRound(round, allRight, 0).speed).toBe(Math.round(BASE * POINTS.speedShare));
-    expect(scoreRound(round, allRight, 150).speed).toBe(Math.round(BASE * POINTS.speedShare * 0.5));
+  it("gives the whole speed bonus for a quick round, and no more for an inhumanly quick one", () => {
+    const full = Math.round(BASE * POINTS.speedShare);
+    expect(scoreRound(round, allRight, ROUND.speedFullWithinSeconds).speed).toBe(full);
+    expect(scoreRound(round, allRight, 45).speed).toBe(full);
+    // Half-way between "full" and the clock: half the bonus.
+    expect(scoreRound(round, allRight, 210).speed).toBe(Math.round(BASE * POINTS.speedShare * 0.5));
+  });
+
+  it("voids a round answered faster than anyone can read it", () => {
+    const fast = scoreRound(round, allRight, 29);
+    expect(fast).toMatchObject({ voided: "too_fast", points: 0, earned: 0, speed: 0, correct: 10 });
+    expect(scoreRound(round, allRight, 30).voided).toBeNull();
+    // The floor is per answer given: three answers in ten seconds is fine, skips cost no time.
+    expect(scoreRound(round, { e1: 0, e2: 0, e3: 0 }, 10)).toMatchObject({ voided: null, points: 30 + 10 });
+    expect(scoreRound(round, {}, 0)).toMatchObject({ voided: null, points: 0 });
+  });
+
+  it("voids a round when the tab was left too often, and ignores a nonsense count", () => {
+    expect(scoreRound(round, allRight, 200, ROUND.maxTabSwitches).voided).toBeNull();
+    expect(scoreRound(round, allRight, 200, ROUND.maxTabSwitches + 1)).toMatchObject({ voided: "left_tab", points: 0, tabSwitches: 3 });
+    for (const junk of [-5, 1.5, Number.NaN]) expect(scoreRound(round, allRight, 200, junk)).toMatchObject({ voided: null, tabSwitches: 0 });
   });
 
   it("an all-wrong round floors at zero, never negative", () => {
-    const s = scoreRound(round, allWrong, 30);
+    const s = scoreRound(round, allWrong, 60);
     expect(s).toMatchObject({ correct: 0, wrong: 10, penalty: 3 * 4 + 5 * 7 + 2 * 10, points: 0 });
   });
 
@@ -35,14 +53,14 @@ describe("scoreRound", () => {
   it("gives no speed bonus below seven correct, however fast", () => {
     const six = Object.fromEntries(round.slice(0, 6).map((x) => [x.id, 0]));
     const seven = Object.fromEntries(round.slice(0, 7).map((x) => [x.id, 0]));
-    expect(scoreRound(round, six, 0).speed).toBe(0);
-    expect(scoreRound(round, seven, 0).speed).toBeGreaterThan(0);
+    expect(scoreRound(round, six, 60).speed).toBe(0);
+    expect(scoreRound(round, seven, 60).speed).toBeGreaterThan(0);
   });
 
   it("is void when submitted after the clock plus grace, and counts within the grace", () => {
     expect(scoreRound(round, allRight, ROUND.seconds + ROUND.graceSeconds).late).toBe(false);
     const late = scoreRound(round, allRight, ROUND.seconds + ROUND.graceSeconds + 1);
-    expect(late).toMatchObject({ late: true, points: 0, speed: 0, correct: 10 });
+    expect(late).toMatchObject({ late: true, voided: "late", points: 0, speed: 0, correct: 10 });
     expect(scoreRound(round, allRight, Number.NaN)).toMatchObject({ late: true, points: 0 });
   });
 
@@ -79,6 +97,17 @@ describe("pickRound", () => {
     expect(bank.map((x) => x.id)).toEqual(before);
   });
 
+  it("deals only questions the student has not seen, until a tier runs out", () => {
+    const seen = new Set(bank.filter((x) => x.difficulty === 2).slice(0, 35).map((x) => x.id));
+    for (let run = 0; run < 100; run++) {
+      const dealt = pickRound(bank, Math.random, seen);
+      expect(dealt.some((x) => seen.has(x.id)), "five unseen mediums are left, so none is repeated").toBe(false);
+    }
+    // Seen everything at one difficulty: that tier starts over rather than failing.
+    const all = new Set(bank.map((x) => x.id));
+    expect(pickRound(bank, Math.random, all).length).toBe(ROUND.count);
+  });
+
   it("refuses a bank that cannot fill the mix", () => {
     expect(() => pickRound(bank.filter((x) => x.difficulty !== 3))).toThrow(/difficulty 3/);
   });
@@ -92,6 +121,14 @@ describe("weekStart", () => {
     expect(weekStart(monday)).toEqual(monday);
     expect(weekStart(new Date("2026-10-07T06:00:00Z"))).toEqual(monday);
     expect(weekStart(new Date("2026-10-11T18:29:00Z"))).toEqual(monday); // the next Sunday night
+  });
+});
+
+describe("dayStart", () => {
+  it("is midnight in India, which is 18:30 UTC the day before", () => {
+    expect(dayStart(new Date("2026-10-04T18:29:59Z"))).toEqual(new Date("2026-10-03T18:30:00Z"));
+    expect(dayStart(new Date("2026-10-04T18:30:00Z"))).toEqual(new Date("2026-10-04T18:30:00Z"));
+    expect(dayStart(new Date("2026-10-05T03:00:00Z"))).toEqual(new Date("2026-10-04T18:30:00Z"));
   });
 });
 

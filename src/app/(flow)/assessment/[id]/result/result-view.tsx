@@ -93,7 +93,7 @@ export function ResultView({ title, kind, verified, score, impact, lines, topics
       {!verified ? (
         <p role="status" className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-          This attempt went over the time limit or had too many tab switches, so it is recorded but not marked verified. The score still counts; a clean retake will restore the verified mark.
+          This attempt had too many tab switches, so it is recorded but not marked verified. The score still counts; a clean retake will restore the verified mark.
         </p>
       ) : null}
 

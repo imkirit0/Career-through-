@@ -5,7 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Panel } from "@/components/bits";
 import { SubmitButton } from "@/components/pending";
-import { ARENA_SUBJECTS, arenaSubjectName } from "@/content/arena";
+import { ARENA_SUBJECTS, arenaSubjectName, type ArenaSubjectId } from "@/content/arena";
 import { POINTS, ROUND, type ArenaQuestion, type RoundScore } from "@/lib/arena";
 import type { Board, BoardEntry } from "@/lib/arena-data";
 import { QuestionPrompt } from "./prompt";
@@ -24,13 +24,17 @@ export function ScoringRules() {
           <tr><th className="py-1.5 pr-3 font-medium">Wrong</th><td className="py-1.5 tabular-nums text-muted-foreground">−{POINTS.wrong[1]} · −{POINTS.wrong[2]} · −{POINTS.wrong[3]} (guessing does not pay)</td></tr>
           <tr><th className="py-1.5 pr-3 font-medium">Skipped</th><td className="py-1.5 text-muted-foreground">0</td></tr>
           <tr><th className="py-1.5 pr-3 font-medium">Streak</th><td className="py-1.5 text-muted-foreground">+{POINTS.streak} for each correct answer straight after another</td></tr>
-          <tr><th className="py-1.5 pr-3 font-medium">Speed</th><td className="py-1.5 text-muted-foreground">up to +{POINTS.speedShare * 100}% for time left, with {POINTS.speedMinCorrect} or more correct</td></tr>
+          <tr><th className="py-1.5 pr-3 font-medium">Speed</th><td className="py-1.5 text-muted-foreground">up to +{POINTS.speedShare * 100}% with {POINTS.speedMinCorrect} or more correct; full bonus for finishing within {ROUND.speedFullWithinSeconds / 60} minutes</td></tr>
         </tbody>
       </table>
-      <p className="text-xs text-muted-foreground">
-        A round never scores below zero, and one handed in after the clock scores zero. Questions are dealt and marked on the server, and each round counts once.
-        Arena points are for the leaderboard only: they never change your readiness.
-      </p>
+      <p className="font-medium">What keeps the board fair</p>
+      <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+        <li>Each subject gives {ROUND.rankedPerSubjectPerDay} ranked rounds a day. Every round dealt uses one, finished or not. More rounds that day are practice and score nothing.</li>
+        <li>A round scores zero if it is handed in after the clock, answered faster than anyone can read ({ROUND.minSecondsPerAnswer} seconds a question), or if you leave the tab more than {ROUND.maxTabSwitches} times.</li>
+        <li>You are not dealt a question you have already had until you have been through them all.</li>
+        <li>Questions are dealt and marked on the server, each round counts once, and a round never scores below zero.</li>
+      </ul>
+      <p className="text-xs text-muted-foreground">Arena points are for the leaderboard only: they never change your readiness.</p>
     </div>
   );
 }
@@ -55,21 +59,27 @@ export function ArenaStats({ week }: { week: Board }) {
   );
 }
 
-export function SubjectCards({ start, disabled }: { start: Start; disabled?: boolean }) {
+export function SubjectCards({ start, rankedLeft }: { start: Start; rankedLeft: Record<ArenaSubjectId, number> }) {
   return (
     <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {ARENA_SUBJECTS.map((s) => (
-        <li key={s.id} className="flex flex-col rounded-2xl border border-foreground/10 bg-card/60 p-4">
-          <p className="font-semibold">{s.name}</p>
-          <p className="mt-1 flex-1 text-sm text-muted-foreground">{s.blurb}</p>
-          <form action={start} className="mt-4">
-            <input type="hidden" name="subject" value={s.id} />
-            <SubmitButton className="h-10 w-full" pendingLabel="Dealing…" disabled={disabled}>
-              <Play className="size-4" aria-hidden /> Play
-            </SubmitButton>
-          </form>
-        </li>
-      ))}
+      {ARENA_SUBJECTS.map((s) => {
+        const left = rankedLeft[s.id];
+        return (
+          <li key={s.id} className="flex flex-col rounded-2xl border border-foreground/10 bg-card/60 p-4">
+            <p className="font-semibold">{s.name}</p>
+            <p className="mt-1 flex-1 text-sm text-muted-foreground">{s.blurb}</p>
+            <p className={cn("mt-3 text-xs font-medium", left ? "text-primary" : "text-muted-foreground")}>
+              {left ? `${left} ranked round${left === 1 ? "" : "s"} left today` : "Today's ranked rounds are used. Practice only until tomorrow."}
+            </p>
+            <form action={start} className="mt-2">
+              <input type="hidden" name="subject" value={s.id} />
+              <SubmitButton variant={left ? "default" : "outline"} className="h-10 w-full" pendingLabel="Dealing…">
+                <Play className="size-4" aria-hidden /> {left ? "Play" : "Play for practice"}
+              </SubmitButton>
+            </form>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -81,7 +91,7 @@ function BoardRows({ board, empty }: { board: Board; empty: string }) {
     <li key={`${e.rank}-${e.name}`} aria-current={e.you ? "true" : undefined} className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm", e.you && "bg-primary/10 font-semibold")}>
       <span className={cn("grid size-7 shrink-0 place-items-center rounded-full text-xs font-semibold tabular-nums", e.rank <= 3 ? "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300" : "bg-foreground/5 text-muted-foreground")}>{e.rank}</span>
       <span className="min-w-0 flex-1 truncate">{e.name}{e.you ? " (you)" : ""}</span>
-      <span className="hidden shrink-0 text-xs font-normal text-muted-foreground sm:inline">{e.rounds} round{e.rounds === 1 ? "" : "s"}</span>
+      <span className="hidden shrink-0 text-xs font-normal text-muted-foreground sm:inline">{e.rounds} round{e.rounds === 1 ? "" : "s"} · {Math.round(e.points / Math.max(e.rounds, 1))} a round</span>
       <span className="w-16 shrink-0 text-right tabular-nums">{e.points}</span>
     </li>
   );
@@ -132,6 +142,8 @@ export function RoundResultView({
   roleTitle: string;
   start: Start;
 }) {
+  const voided = score?.voided ?? (score?.late ? "late" : null);
+  const earned = score?.earned ?? points;
   const lines = score
     ? [
         { label: `${score.correct} correct`, value: score.base, sign: "+" },
@@ -143,11 +155,11 @@ export function RoundResultView({
   return (
     <div className="space-y-5">
       <section className="surface-hero overflow-hidden rounded-3xl p-7 sm:p-9">
-        <p className="text-sm text-white/80">{arenaSubjectName(subject)} round</p>
+        <p className="text-sm text-white/80">{arenaSubjectName(subject)} {score?.practice ? "practice round" : "round"}</p>
         <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-6 sm:grid-cols-2">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-white/70">Points</p>
-            <p className="mt-1 text-6xl font-semibold tabular-nums tracking-tight">{points}</p>
+            <p className="mt-1 text-6xl font-semibold tabular-nums tracking-tight">{score?.practice ? earned : points}</p>
             <p className="mt-1 text-white/85">{score ? `${score.correct} of ${questions.length} correct${score.skipped ? ` · ${score.skipped} skipped` : ""}` : "Round closed"}</p>
           </div>
           <div className="sm:border-l sm:border-white/20 sm:pl-6">
@@ -160,14 +172,24 @@ export function RoundResultView({
         </div>
       </section>
 
-      {score?.late ? (
+      {voided ? (
         <p role="status" className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           <Clock className="mt-0.5 size-4 shrink-0" aria-hidden />
-          This round was handed in after the clock ran out, so it scores zero. Your answers are still reviewed below.
+          {voided === "late"
+            ? "This round was handed in after the clock ran out, so it scores zero."
+            : voided === "too_fast"
+              ? "This round was answered faster than the questions can be read, so it scores zero."
+              : `You left the tab ${score?.tabSwitches ?? "several"} times during this round, so it scores zero.`}{" "}
+          Your answers are still reviewed below.
+        </p>
+      ) : score?.practice ? (
+        <p role="status" className="flex gap-2 rounded-xl border border-foreground/10 bg-foreground/5 p-3 text-sm">
+          <Clock className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+          This was a practice round: today&apos;s ranked rounds for this subject were already used, so these points are not on the leaderboard.
         </p>
       ) : null}
 
-      {score && !score.late ? (
+      {score && !voided ? (
         <Panel title="How the points add up">
           <dl className="space-y-1.5 text-sm">
             {lines.map((l) => (
@@ -178,7 +200,7 @@ export function RoundResultView({
             ))}
             <div className="flex justify-between gap-3 border-t pt-2 font-semibold">
               <dt>Round total{score.base - score.penalty + score.streak + score.speed < 0 ? " (never below zero)" : ""}</dt>
-              <dd className="tabular-nums">{points}</dd>
+              <dd className="tabular-nums">{earned}</dd>
             </div>
           </dl>
         </Panel>

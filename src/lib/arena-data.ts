@@ -1,13 +1,16 @@
 import "server-only";
-import { and, count, desc, eq, gt, gte, isNotNull, isNull, max, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, isNotNull, isNull, max, notLike, sql, sum } from "drizzle-orm";
 import { arenaRound, db, profile } from "@/db";
-import type { ArenaSubjectId } from "@/content/arena";
-import { ROUND, SCORING_VERSION, displayName, pickRound, rankRows, scoreRound, type ArenaQuestion, type RoundScore } from "./arena";
+import { ARENA_SUBJECTS, type ArenaSubjectId } from "@/content/arena";
+import { PRACTICE_SUFFIX, ROUND, SCORING_VERSION, dayStart, displayName, pickRound, rankRows, scoreRound, type ArenaQuestion, type RoundScore } from "./arena";
 import { loadBank } from "./arena-bank";
 import { logEvent } from "./events";
 
 // Everything that reads or writes a round. Time is always the database's clock, and a
 // round's result is written exactly once: see finishRound.
+
+/** How many of a student's past rounds in a subject are checked so they are not dealt the same question again. */
+const SEEN_ROUNDS = 400;
 
 /** Seconds since the round started, by the database clock. */
 const elapsed = sql<number>`extract(epoch from (now() - ${arenaRound.startedAt}))`.mapWith(Number);
@@ -38,10 +41,21 @@ export async function startRound(userId: string, roleId: string, subject: ArenaS
   if (open && !expired(open.elapsed)) return { id: open.id };
   if (open) await finishRound(userId, open.id, {});
 
+  // Every round dealt today counts against the day's ranked rounds, finished or not.
+  const earlier = await db
+    .select({ questionIds: arenaRound.questionIds, startedAt: arenaRound.startedAt })
+    .from(arenaRound)
+    .where(and(eq(arenaRound.userId, userId), eq(arenaRound.subject, subject)))
+    .orderBy(desc(arenaRound.startedAt))
+    .limit(SEEN_ROUNDS);
+  const today = dayStart().getTime();
+  const ranked = earlier.filter((r) => r.startedAt.getTime() >= today).length < ROUND.rankedPerSubjectPerDay;
+  const scoringVersion = ranked ? SCORING_VERSION : SCORING_VERSION + PRACTICE_SUFFIX;
+
   const { all } = await loadBank(subject);
-  const questionIds = pickRound(all, rand).map((q) => q.id);
+  const questionIds = pickRound(all, rand, new Set(earlier.flatMap((r) => r.questionIds))).map((q) => q.id);
   try {
-    const [row] = await db.insert(arenaRound).values({ userId, roleId, subject, questionIds, scoringVersion: SCORING_VERSION }).returning({ id: arenaRound.id });
+    const [row] = await db.insert(arenaRound).values({ userId, roleId, subject, questionIds, scoringVersion }).returning({ id: arenaRound.id });
     return row;
   } catch (e) {
     // Two starts at once (two tabs): the unique index let one in. Join that round.
@@ -67,6 +81,7 @@ export async function getRound(userId: string, roundId: string) {
       points: arenaRound.points,
       correct: arenaRound.correct,
       score: arenaRound.score,
+      scoringVersion: arenaRound.scoringVersion,
       elapsed,
     })
     .from(arenaRound)
@@ -75,7 +90,7 @@ export async function getRound(userId: string, roundId: string) {
   if (!row) return null;
   const { byId } = await loadBank(row.subject as ArenaSubjectId);
   const questions = row.questionIds.map((id) => byId.get(id)).filter((q): q is ArenaQuestion => q !== undefined);
-  return { ...row, questions, secondsLeft: Math.max(Math.ceil(ROUND.seconds - row.elapsed), 0), expired: expired(row.elapsed) };
+  return { ...row, questions, practice: row.scoringVersion.endsWith(PRACTICE_SUFFIX), secondsLeft: Math.max(Math.ceil(ROUND.seconds - row.elapsed), 0), expired: expired(row.elapsed) };
 }
 
 export type FinishedRound = { id: string; subject: string; points: number; correct: number; score: Omit<RoundScore, "marks"> | null; answers: Record<string, number>; questions: ArenaQuestion[] };
@@ -86,13 +101,15 @@ export type FinishedRound = { id: string; subject: string; points: number; corre
  * round was already finished (a double click, a second tab, a replayed request) nothing is
  * written and the stored result is returned unchanged.
  */
-export async function finishRound(userId: string, roundId: string, answers: Record<string, unknown>): Promise<FinishedRound | null> {
+export async function finishRound(userId: string, roundId: string, answers: Record<string, unknown>, tabSwitches = 0): Promise<FinishedRound | null> {
   const round = await getRound(userId, roundId);
   if (!round) return null;
   const stored = (r: NonNullable<typeof round>): FinishedRound => ({ id: r.id, subject: r.subject, points: r.points, correct: r.correct, score: r.score, answers: r.answers ?? {}, questions: r.questions });
   if (round.finishedAt) return stored(round);
 
-  const { marks, ...score } = scoreRound(round.questions, answers, round.elapsed);
+  const { marks, ...scored } = scoreRound(round.questions, answers, round.elapsed, tabSwitches);
+  // A practice round is marked the same way; it just puts nothing on the board.
+  const score = round.practice ? { ...scored, practice: true, points: 0 } : scored;
   const kept = Object.fromEntries(marks.filter((m) => m.choice !== null).map((m) => [m.id, m.choice as number]));
 
   const written = await db.transaction(async (tx) => {
@@ -102,7 +119,7 @@ export async function finishRound(userId: string, roundId: string, answers: Reco
       // The guard that makes this once-only: a finished round matches no row.
       .where(and(eq(arenaRound.id, roundId), eq(arenaRound.userId, userId), isNull(arenaRound.finishedAt)))
       .returning({ id: arenaRound.id });
-    if (row) await logEvent(userId, "ARENA_ROUND_FINISHED", { roundId, subject: round.subject, points: score.points, correct: score.correct, total: round.questions.length }, tx);
+    if (row) await logEvent(userId, "ARENA_ROUND_FINISHED", { roundId, subject: round.subject, points: score.points, correct: score.correct, total: round.questions.length, practice: round.practice }, tx);
     return Boolean(row);
   });
 
@@ -130,7 +147,7 @@ export async function getBoard(roleId: string, since: Date | null, viewerId: str
     .select({ userId: arenaRound.userId, points, rounds: count(), lastFinishedAt: max(arenaRound.finishedAt), name: profile.name, hidden: profile.leaderboardHidden })
     .from(arenaRound)
     .innerJoin(profile, eq(profile.userId, arenaRound.userId))
-    .where(and(eq(arenaRound.roleId, roleId), isNotNull(arenaRound.finishedAt), since ? gte(arenaRound.finishedAt, since) : undefined))
+    .where(and(eq(arenaRound.roleId, roleId), isNotNull(arenaRound.finishedAt), notLike(arenaRound.scoringVersion, `%${PRACTICE_SUFFIX}`), since ? gte(arenaRound.finishedAt, since) : undefined))
     .groupBy(arenaRound.userId, profile.name, profile.leaderboardHidden)
     .having(gt(points, 0))
     .orderBy(desc(points));
@@ -139,4 +156,15 @@ export async function getBoard(roleId: string, since: Date | null, viewerId: str
   const entry = (r: (typeof ranked)[number]): BoardEntry => ({ rank: r.rank, name: displayName(r.name, r.hidden), points: r.points, rounds: r.rounds, you: r.userId === viewerId });
   const me = ranked.find((r) => r.userId === viewerId);
   return { top: ranked.slice(0, BOARD_SIZE).map(entry), you: me ? entry(me) : null, players: ranked.length };
+}
+
+/** Ranked rounds each subject still has for the student today (India time). */
+export async function getRankedLeft(userId: string): Promise<Record<ArenaSubjectId, number>> {
+  const rows = await db
+    .select({ subject: arenaRound.subject, dealt: count() })
+    .from(arenaRound)
+    .where(and(eq(arenaRound.userId, userId), gte(arenaRound.startedAt, dayStart())))
+    .groupBy(arenaRound.subject);
+  const dealt = new Map(rows.map((r) => [r.subject, r.dealt]));
+  return Object.fromEntries(ARENA_SUBJECTS.map((s) => [s.id, Math.max(ROUND.rankedPerSubjectPerDay - (dealt.get(s.id) ?? 0), 0)])) as Record<ArenaSubjectId, number>;
 }

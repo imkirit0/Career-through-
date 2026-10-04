@@ -10,7 +10,7 @@ import { matchJob, matchJobs, requiredReadiness } from "./matching";
 import { nextUnlock, projectSkillImpact } from "./simulate";
 import { claimedSkills } from "./resume-claims";
 import { EMPTY_RESUME } from "./resume-schema";
-import { isVerified, toPublic } from "./assessment";
+import { MAX_TAB_SWITCHES, isVerified, toPublic } from "./assessment";
 import { difficultyOf, nextDifficulty, pickQuestion, scoreAdaptive, startDifficulty, SCORING_VERSION } from "./adaptive";
 import { evidenceFromAdaptive } from "./attempt";
 import { selectPrompts } from "./interview/select";
@@ -292,12 +292,10 @@ describe("adaptive assessment", () => {
     expect(rows[0].expiresAt.getTime()).toBeGreaterThan(at.getTime());
   });
 
-  it("verified = in time and within tab-switch tolerance", () => {
-    const startedAt = new Date("2026-09-19T10:00:00Z");
-    const at = (min: number) => new Date(startedAt.getTime() + min * 60_000);
-    expect(isVerified({ startedAt, completedAt: at(9), durationMin: 10, tabSwitches: 0 })).toBe(true);
-    expect(isVerified({ startedAt, completedAt: at(12), durationMin: 10, tabSwitches: 0 })).toBe(false);
-    expect(isVerified({ startedAt, completedAt: at(9), durationMin: 10, tabSwitches: 9 })).toBe(false);
+  it("verified = within tab-switch tolerance; the untimed interview cannot un-verify a paper", () => {
+    expect(isVerified({ tabSwitches: 0 })).toBe(true);
+    expect(isVerified({ tabSwitches: MAX_TAB_SWITCHES })).toBe(true);
+    expect(isVerified({ tabSwitches: MAX_TAB_SWITCHES + 1 })).toBe(false);
   });
 });
 

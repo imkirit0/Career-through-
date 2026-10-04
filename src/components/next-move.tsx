@@ -21,6 +21,7 @@ export function NextMove({ action, upNext, formulaVersion, totalJobs }: { action
   return (
     <section
       aria-labelledby="next-move"
+      data-tour="next-step"
       className="relative overflow-hidden rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/[0.16] via-primary/[0.06] to-background shadow-[0_24px_60px_-36px_oklch(0.5_0.24_290/0.55)]"
     >
       <div className="relative grid grid-cols-[minmax(0,1fr)] gap-6 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] xl:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">

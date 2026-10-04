@@ -23,6 +23,7 @@ export default async function ArenaPlayPage({ params }: { params: Promise<{ id: 
         roundId={round.id}
         subject={arenaSubjectName(round.subject)}
         secondsLeft={round.secondsLeft}
+        practice={round.practice}
         // Answer keys and explanations stay on the server until the round is finished.
         questions={round.questions.map(({ id: qid, topic, difficulty, prompt, options }) => ({ id: qid, topic, difficulty, prompt, options }))}
       />

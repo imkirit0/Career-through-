@@ -56,10 +56,14 @@ export function toPublic(q: Question): PublicQuestion {
   return { id: q.id, skillId: q.skillId, topicId: q.topicId, prompt: q.prompt, options: q.options };
 }
 
-/** "Verified" = finished inside the time limit, server-scored, tab switches within tolerance. */
-export function isVerified(a: { startedAt: Date; completedAt: Date; durationMin: number; tabSwitches: number }) {
-  const elapsed = (a.completedAt.getTime() - a.startedAt.getTime()) / 1000;
-  return elapsed <= a.durationMin * 60 + GRACE_SECONDS && a.tabSwitches <= MAX_TAB_SWITCHES;
+/**
+ * "Verified" = server-scored, inside the time limit, tab switches within tolerance.
+ * The time limit needs no check here: every answer is refused once the clock has run out,
+ * so an attempt that gets as far as being scored answered its questions in time. The
+ * interview that follows is untimed, and how long it takes must not un-verify the paper.
+ */
+export function isVerified(a: { tabSwitches: number }) {
+  return a.tabSwitches <= MAX_TAB_SWITCHES;
 }
 
 export function isExpired(startedAt: Date, durationMin: number, now: Date) {

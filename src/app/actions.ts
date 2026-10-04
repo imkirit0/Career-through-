@@ -378,7 +378,7 @@ async function finalizeAttempt(tx: Tx, userId: string, role: Role, attemptId: st
   const [a] = await tx.select().from(attempt).where(eq(attempt.id, attemptId)).limit(1);
   const def = getAssessment(a.assessmentId)!;
   const completedAt = new Date();
-  const verified = isVerified({ startedAt: a.startedAt, completedAt, durationMin: a.durationMin, tabSwitches: a.tabSwitches });
+  const verified = isVerified(a);
   const score = scoreAttemptAdaptive(a, def);
 
   const jobs = jobsForRole(role.id);
@@ -615,6 +615,8 @@ export async function startArenaRound(form: FormData) {
 const arenaFinishInput = z.object({
   roundId: z.string().uuid(),
   answers: z.record(z.string().max(40), z.number().int().min(0).max(3)).refine((a) => Object.keys(a).length <= ROUND.count),
+  /** How often the tab was left during the round, as counted by the browser. */
+  tabSwitches: z.number().int().min(0).max(999).default(0),
 });
 
 /**
@@ -625,7 +627,7 @@ export async function finishArenaRound(input: unknown): Promise<{ error: string 
   const parsed = arenaFinishInput.safeParse(input);
   if (!parsed.success) return { error: "That round was not valid." };
   const { user } = await requireCandidate();
-  const done = await finishRound(user.id, parsed.data.roundId, parsed.data.answers);
+  const done = await finishRound(user.id, parsed.data.roundId, parsed.data.answers, parsed.data.tabSwitches);
   if (!done) return { error: "That round could not be found." };
   revalidatePath("/arena");
   return { ok: true };

@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Clock } from "lucide-react";
+import { Clock, EyeOff } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/pending";
-import type { ArenaPublicQuestion } from "@/lib/arena";
+import { ROUND, type ArenaPublicQuestion } from "@/lib/arena";
 import { finishArenaRound } from "../../../../actions";
 import { QuestionPrompt } from "../../prompt";
 
@@ -17,7 +17,7 @@ const noop = () => () => {};
  * One round, one question per screen. Nothing here decides the score: the clock shown is a
  * courtesy (the server keeps its own), and only the choices are sent when the round ends.
  */
-export function ArenaRun({ roundId, subject, questions, secondsLeft }: { roundId: string; subject: string; questions: ArenaPublicQuestion[]; secondsLeft: number }) {
+export function ArenaRun({ roundId, subject, questions, secondsLeft, practice }: { roundId: string; subject: string; questions: ArenaPublicQuestion[]; secondsLeft: number; practice: boolean }) {
   const router = useRouter();
   const storageKey = `arena:${roundId}`;
   // False on the server and while hydrating, so choices restored from the tab's storage never mismatch the server's HTML.
@@ -29,6 +29,11 @@ export function ArenaRun({ roundId, subject, questions, secondsLeft }: { roundId
     } catch {
       return {};
     }
+  });
+  // How often the tab was left. It is reported with the answers; the server decides what it means.
+  const [tabSwitches, setTabSwitches] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    return Number(window.sessionStorage.getItem(`${storageKey}:tabs`)) || 0;
   });
   const [index, setIndex] = useState(0);
   const [deadline] = useState(() => Date.now() + secondsLeft * 1000);
@@ -47,20 +52,46 @@ export function ArenaRun({ roundId, subject, questions, secondsLeft }: { roundId
     setError(null);
     start(async () => {
       try {
-        const res = await finishArenaRound({ roundId, answers });
+        const res = await finishArenaRound({ roundId, answers, tabSwitches });
         if ("error" in res) {
           sent.current = false;
           setError(res.error);
           return;
         }
         window.sessionStorage.removeItem(storageKey);
+        window.sessionStorage.removeItem(`${storageKey}:tabs`);
         router.replace(`/arena/round/${roundId}`);
       } catch {
         sent.current = false;
         setError("We couldn't reach the server. Your choices are kept: try again.");
       }
     });
-  }, [roundId, answers, router, storageKey]);
+  }, [roundId, answers, tabSwitches, router, storageKey]);
+
+  useEffect(() => {
+    // A refresh or closing the page also hides it for a moment: that is not leaving the tab.
+    let unloading = false;
+    const onUnload = () => {
+      unloading = true;
+    };
+    const onHide = () => {
+      if (document.visibilityState !== "hidden" || unloading) return;
+      setTabSwitches((n) => {
+        try {
+          window.sessionStorage.setItem(`${storageKey}:tabs`, String(n + 1));
+        } catch {
+          // Counting still works for this page load without storage.
+        }
+        return n + 1;
+      });
+    };
+    window.addEventListener("beforeunload", onUnload);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("beforeunload", onUnload);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [storageKey]);
 
   useEffect(() => {
     const t = setInterval(() => setLeft(Math.max(Math.ceil((deadline - Date.now()) / 1000), 0)), 500);
@@ -89,7 +120,10 @@ export function ArenaRun({ roundId, subject, questions, secondsLeft }: { roundId
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm font-medium text-muted-foreground">{subject} · Question {index + 1} of {questions.length}</p>
+        <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-muted-foreground">
+          <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", practice ? "bg-foreground/10 text-muted-foreground" : "bg-primary/15 text-primary")}>{practice ? "Practice" : "Ranked"}</span>
+          {subject} · Question {index + 1} of {questions.length}
+        </p>
         <p
           role="timer"
           aria-label={`${Math.floor(left / 60)} minutes ${left % 60} seconds left`}
@@ -143,6 +177,15 @@ export function ArenaRun({ roundId, subject, questions, secondsLeft }: { roundId
           })}
         </div>
       </section>
+
+      {!practice ? (
+        <p className={cn("mt-3 flex items-start gap-2 text-xs", tabSwitches > ROUND.maxTabSwitches ? "text-rose-700 dark:text-rose-300" : "text-muted-foreground")}>
+          <EyeOff className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          {tabSwitches > ROUND.maxTabSwitches
+            ? `You left this tab ${tabSwitches} times, so this round will not score.`
+            : `Stay on this tab: leaving it more than ${ROUND.maxTabSwitches} times voids the round.${tabSwitches ? ` You have left ${tabSwitches} time${tabSwitches === 1 ? "" : "s"}.` : ""}`}
+        </p>
+      ) : null}
 
       {error ? <p role="alert" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">{error}</p> : null}
 

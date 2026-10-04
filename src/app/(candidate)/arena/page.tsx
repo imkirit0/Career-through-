@@ -5,8 +5,8 @@ import { cn } from "cn";
 import { buttonVariants } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/bits";
 import { Why } from "@/components/why";
-import { weekStart } from "@/lib/arena";
-import { getBoard, getOpenRound } from "@/lib/arena-data";
+import { ROUND, weekStart } from "@/lib/arena";
+import { getBoard, getOpenRound, getRankedLeft } from "@/lib/arena-data";
 import { requireCandidate } from "@/lib/data";
 import { startArenaRound } from "../../actions";
 import { ArenaStats, Leaderboard, ScoringRules, SubjectCards } from "./parts";
@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Arena" };
 
 export default async function ArenaPage() {
   const { user, role } = await requireCandidate();
-  const [week, allTime, open] = await Promise.all([getBoard(role.id, weekStart(), user.id), getBoard(role.id, null, user.id), getOpenRound(user.id)]);
+  const [week, allTime, open, rankedLeft] = await Promise.all([getBoard(role.id, weekStart(), user.id), getBoard(role.id, null, user.id), getOpenRound(user.id), getRankedLeft(user.id)]);
 
   return (
     <>
@@ -37,8 +37,10 @@ export default async function ArenaPage() {
         <ArenaStats week={week} />
 
         <Panel title="Pick a subject">
-          <SubjectCards start={startArenaRound} />
-          <p className="mt-4 text-xs text-muted-foreground">Any subject counts towards the same board. Arena points never change your readiness.</p>
+          <SubjectCards start={startArenaRound} rankedLeft={rankedLeft} />
+          <p className="mt-4 text-xs text-muted-foreground">
+            Each subject has {ROUND.rankedPerSubjectPerDay} ranked rounds a day; after that you can keep playing for practice. Every subject counts towards the same board, and Arena points never change your readiness.
+          </p>
         </Panel>
 
         <Leaderboard week={week} allTime={allTime} roleTitle={role.title} />

@@ -9,7 +9,7 @@ import type { NextAction } from "@/lib/next-action";
 /** "Improve SQL" and "Verify SQL" are both about SQL: the plan lists the thing, not the verb. */
 export const moveLabel = (a: NextAction) => a.title.replace(/^(Improve|Verify) /, "");
 
-export function Greeting({ hour, name, roleTitle, streak }: { hour: number; name: string; roleTitle: string; streak: number }) {
+export function Greeting({ hour, name, roleTitle, streak, children }: { hour: number; name: string; roleTitle: string; streak: number; children?: React.ReactNode }) {
   return (
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
@@ -21,6 +21,8 @@ export function Greeting({ hour, name, roleTitle, streak }: { hour: number; name
           You&apos;re working towards <span className="font-semibold text-foreground">{roleTitle}</span>.
         </p>
       </div>
+      <div className="flex flex-wrap items-center gap-3">
+      {children}
       {streak > 0 ? (
         <div className="rise flex items-center gap-3 rounded-2xl border border-foreground/10 bg-card/70 px-4 py-3 shadow-sm backdrop-blur" style={{ ["--i" as string]: 1 }}>
           <CalendarCheck className="size-6 text-muted-foreground" aria-hidden />
@@ -33,6 +35,7 @@ export function Greeting({ hour, name, roleTitle, streak }: { hour: number; name
           </span>
         </div>
       ) : null}
+      </div>
     </header>
   );
 }
@@ -76,7 +79,7 @@ const ACTIVITY_ICON: Record<ActivityKind, [LucideIcon, string]> = {
 export function RecentActivity({ items, className, style }: { items: ActivityItem[]; className?: string; style?: React.CSSProperties }) {
   if (!items.length) return null;
   return (
-    <Panel title="Recent activity" className={className} style={style}>
+    <Panel id="tour-activity" title="Recent activity" className={className} style={style}>
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 2xl:grid-cols-4">
         {items.map((item, n) => {
           const [Icon, tone] = ACTIVITY_ICON[item.kind];
