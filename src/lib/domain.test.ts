@@ -42,12 +42,12 @@ const role: Role = {
 };
 
 describe("content integrity", () => {
-  it("every skill has 4 topics, 8 questions (2 per topic) and a 5-day plan", () => {
+  it("every skill has 4 topics, 16 questions (4 per topic) and a 5-day plan", () => {
     for (const s of SKILLS) {
       expect(s.topics, s.id).toHaveLength(4);
       const qs = QUESTIONS.filter((q) => q.skillId === s.id);
-      expect(qs, s.id).toHaveLength(8);
-      for (const t of s.topics) expect(qs.filter((q) => q.topicId === t.id), t.id).toHaveLength(2);
+      expect(qs, s.id).toHaveLength(16);
+      for (const t of s.topics) expect(qs.filter((q) => q.topicId === t.id), t.id).toHaveLength(4);
       const plan = PLANS.find((p) => p.skillId === s.id);
       expect(plan?.days.map((d) => d.topicId), s.id).toEqual([...s.topics.map((t) => t.id), null]);
     }
@@ -229,24 +229,27 @@ describe("adaptive assessment", () => {
       used.add(q.id);
       asked.push({ question: q, choice: answers(q) });
     }
-    return { asked, score: scoreAdaptive(asked, start, { sql: count }, "seed") };
+    return { asked, score: scoreAdaptive(asked) };
   };
 
   it("derives assessment definitions from ids and rejects unknown ones", () => {
-    expect(getAssessment("baseline:qa-engineer")).toMatchObject({ kind: "baseline", questionsPerSkill: 3 });
+    const baseline = getAssessment("baseline:qa-engineer")!;
+    expect(baseline.kind).toBe("baseline");
+    expect(Object.keys(baseline.questionsBySkill).sort()).toEqual([...baseline.skillIds].sort());
+    expect(def.questionsBySkill).toEqual({ sql: 6 });
     expect(getAssessment("skill:nope")).toBeNull();
     expect(getAssessment("garbage")).toBeNull();
   });
 
   it("gets harder on a correct answer and easier on a wrong one", () => {
     const climb = run((q) => q.answer);
-    // The pool holds two questions per band, so a perfect run climbs and then reuses what is left.
-    expect(climb.asked.map((a) => difficultyOf(a.question, skill))).toEqual([2, 3, 4, 4, 3, 2]);
+    // The pool holds four questions per band, so a perfect run climbs to the top and stays there.
+    expect(climb.asked.map((a) => difficultyOf(a.question, skill))).toEqual([2, 3, 4, 4, 4, 4]);
     const fall = run((q) => (q.answer + 1) % 4);
     const path = fall.asked.map((a) => difficultyOf(a.question, skill));
     expect(path.slice(0, 3)).toEqual([2, 1, 1]);
-    // Only two questions exist per band, so a failing run eventually exhausts the easy ones
-    // and is offered harder ones again — but it stays easier overall than a climbing run.
+    // A failing run stays at the bottom until the easy questions run out, so it is easier
+    // overall than a climbing run.
     const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
     expect(mean(path)).toBeLessThan(mean(climb.asked.map((a) => difficultyOf(a.question, skill))));
   });
@@ -256,7 +259,10 @@ describe("adaptive assessment", () => {
     const easyOnly = run((q) => (difficultyOf(q, skill) <= 1 ? q.answer : (q.answer + 1) % 4));
     expect(easyOnly.score.bySkill.sql.correct).toBeGreaterThan(0);
     expect(easyOnly.score.bySkill.sql.pct).toBeLessThan(40);
-    expect(run((q) => q.answer).score.bySkill.sql.pct).toBe(100);
+    const perfect = run((q) => q.answer).score.bySkill.sql;
+    expect(perfect.pct).toBeGreaterThan(84);
+    expect(perfect.low).toBeLessThanOrEqual(perfect.pct);
+    expect(perfect.high).toBeGreaterThanOrEqual(perfect.pct);
   });
 
   it("records the hardest band answered correctly", () => {
@@ -267,7 +273,7 @@ describe("adaptive assessment", () => {
   it("treats a skip or an invalid choice as wrong", () => {
     const skipped = run(() => undefined);
     expect(skipped.score.correct).toBe(0);
-    expect(skipped.score.bySkill.sql.pct).toBe(0);
+    expect(skipped.score.bySkill.sql.pct).toBeLessThan(15);
     expect(run(() => 99).score.correct).toBe(0);
   });
 
@@ -287,8 +293,8 @@ describe("adaptive assessment", () => {
     const { score } = run((q) => q.answer);
     const rows = evidenceFromAdaptive(def, score, { id: "a1", verified: true, completedAt: at });
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ skillId: "sql", type: "assessment", score: 100, verified: true, refId: "a1" });
-    expect(rows[0].detail).toMatchObject({ peakCorrect: 4, scoringVersion: SCORING_VERSION });
+    expect(rows[0]).toMatchObject({ skillId: "sql", type: "assessment", score: score.bySkill.sql.pct, verified: true, refId: "a1" });
+    expect(rows[0].detail).toMatchObject({ peakCorrect: 4, scoringVersion: SCORING_VERSION, low: score.bySkill.sql.low, high: score.bySkill.sql.high });
     expect(rows[0].expiresAt.getTime()).toBeGreaterThan(at.getTime());
   });
 

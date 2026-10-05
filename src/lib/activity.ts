@@ -75,7 +75,7 @@ export function describeActivity(events: ActivityEvent[], attempts: { id: string
         add("plan", `Finished day ${(num("day") ?? 0) + 1} of the ${skillName(str("skillId"))} plan`, "Study plan", `/plan/${str("skillId")}`);
         break;
       case "PROJECT_SUBMITTED":
-        add("project", "Submitted your project", "Project evidence", "/evidence");
+        add("project", "Submitted your project", "Project evidence", "/plan?view=project");
         break;
       case "JOB_UNLOCKED": {
         const job = getJob(str("jobId"));

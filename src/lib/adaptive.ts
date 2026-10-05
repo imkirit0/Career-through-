@@ -1,7 +1,7 @@
 import "server-only";
 import type { Question, Skill } from "@/content/taxonomy";
 import { getSkill } from "@/content/skills";
-import { questionsForSkill } from "@/content/assessments";
+import { estimateLevel } from "./estimate";
 
 /**
  * Progressive (adaptive) question selection and scoring.
@@ -9,14 +9,12 @@ import { questionsForSkill } from "@/content/assessments";
  * Difficulty comes from the skill's own topic order, which is authored
  * foundational → applied, so topic 1 is the easiest and topic 4 the most applied.
  * Get one right and the next is harder; get one wrong and it steps back down.
+ * The ladder decides what is asked; ./estimate decides what the answers add up to.
  */
-export const SCORING_VERSION = "adaptive-v1";
+export const SCORING_VERSION = "adaptive-v2";
 
 export const MAX_DIFFICULTY = 4;
 export const MIN_DIFFICULTY = 1;
-
-/** Harder questions are worth more. A score is earned weight over the best possible run. */
-const WEIGHT: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4 };
 
 export function difficultyOf(question: Question, skill: Skill = getSkill(question.skillId)): number {
   const i = skill.topics.findIndex((t) => t.id === question.topicId);
@@ -28,27 +26,6 @@ const clamp = (d: number) => Math.min(Math.max(d, MIN_DIFFICULTY), MAX_DIFFICULT
 /** Where a skill's ladder starts: a baseline opens gently, a re-assessment opens mid. */
 export function startDifficulty(kind: "baseline" | "skill" | "final"): number {
   return kind === "baseline" ? 1 : 2;
-}
-
-/**
- * The ceiling for an attempt: the weight a candidate would earn by answering everything
- * correctly, walking the same ladder through the same question pool. Scoring against this
- * — rather than against the questions you happened to be asked — is what stops an easy
- * run from producing a high score, while still letting a genuinely strong run reach 100.
- */
-export function bestPossibleWeight(skillId: string, count: number, start: number, seed: string): number {
-  const pool = questionsForSkill(skillId);
-  const used = new Set<string>();
-  let d = clamp(start);
-  let total = 0;
-  for (let i = 0; i < count; i++) {
-    const q = pickQuestion(pool, used, d, seed);
-    if (!q) break;
-    used.add(q.id);
-    total += WEIGHT[difficultyOf(q)];
-    d = clamp(d + 1);
-  }
-  return total;
 }
 
 export type AskedAnswer = { question: Question; choice: number | undefined };
@@ -105,10 +82,11 @@ export function nextSkill(progress: Record<string, SkillProgress>, order: string
 export type AdaptiveSkillScore = {
   correct: number;
   total: number;
-  /** Difficulty-weighted percentage: the level this skill is actually set to. */
+  /** The estimated level: what this skill is set to. See ./estimate. */
   pct: number;
-  earned: number;
-  possible: number;
+  /** The range the level very likely lies in. Absent on results scored before adaptive-v2. */
+  low?: number;
+  high?: number;
   /** Highest difficulty answered correctly — used to gate the top band. */
   peakCorrect: number;
   topics: Record<string, { correct: number; total: number; pct: number }>;
@@ -117,62 +95,52 @@ export type AdaptiveSkillScore = {
 export type AdaptiveScore = {
   correct: number;
   total: number;
+  /** The average of the skill levels. */
   pct: number;
   scoringVersion: string;
   bySkill: Record<string, AdaptiveSkillScore>;
 };
 
 /**
- * Score an attempt by difficulty. Answering only the easy questions correctly earns
- * little weight against the full ladder, so a weak run cannot reach a strong score.
+ * Score an attempt. Each skill's level is estimated from the difficulty of every question
+ * it was asked and whether the answer was right, so a run of easy answers cannot claim a
+ * high level and one slip does not halve it. A skipped or "not sure" answer is a wrong one.
  */
-export function scoreAdaptive(
-  asked: AskedAnswer[],
-  start: number,
-  quotaBySkill: Record<string, number>,
-  seed = "",
-): AdaptiveScore {
+export function scoreAdaptive(asked: AskedAnswer[]): AdaptiveScore {
   const bySkill: Record<string, AdaptiveSkillScore> = {};
+  const answered: Record<string, { difficulty: number; right: boolean }[]> = {};
   let correct = 0;
 
   for (const { question, choice } of asked) {
     const skill = getSkill(question.skillId);
     const d = difficultyOf(question, skill);
     const ok = Number.isInteger(choice) && choice === question.answer;
-    const s = (bySkill[question.skillId] ??= {
-      correct: 0,
-      total: 0,
-      pct: 0,
-      earned: 0,
-      possible: 0,
-      peakCorrect: 0,
-      topics: {},
-    });
+    const s = (bySkill[question.skillId] ??= { correct: 0, total: 0, pct: 0, peakCorrect: 0, topics: {} });
     const t = (s.topics[question.topicId] ??= { correct: 0, total: 0, pct: 0 });
+    (answered[question.skillId] ??= []).push({ difficulty: d, right: ok });
     s.total++;
     t.total++;
     if (ok) {
       s.correct++;
       t.correct++;
-      s.earned += WEIGHT[d];
       s.peakCorrect = Math.max(s.peakCorrect, d);
       correct++;
     }
   }
 
   for (const [skillId, s] of Object.entries(bySkill)) {
-    s.possible = bestPossibleWeight(skillId, quotaBySkill[skillId] ?? s.total, start, seed);
-    s.pct = s.possible ? Math.min(Math.round((s.earned / s.possible) * 100), 100) : 0;
+    const { level, low, high } = estimateLevel(answered[skillId]);
+    s.pct = level;
+    s.low = low;
+    s.high = high;
     for (const t of Object.values(s.topics)) t.pct = t.total ? Math.round((t.correct / t.total) * 100) : 0;
   }
 
-  const earned = Object.values(bySkill).reduce((n, s) => n + s.earned, 0);
-  const possible = Object.values(bySkill).reduce((n, s) => n + s.possible, 0);
-
+  const levels = Object.values(bySkill).map((s) => s.pct);
   return {
     correct,
     total: asked.length,
-    pct: possible ? Math.min(Math.round((earned / possible) * 100), 100) : 0,
+    pct: levels.length ? Math.round(levels.reduce((a, b) => a + b, 0) / levels.length) : 0,
     scoringVersion: SCORING_VERSION,
     bySkill,
   };

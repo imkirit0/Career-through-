@@ -42,11 +42,10 @@ export default async function DashboardPage() {
     { id: "plan", target: "#tour-plan", title: "Current plan", body: "The skills to work on, in order, with your level in each. The first one is what your next step is about." },
     { id: "milestone", target: "#tour-milestone", title: "Next milestone", body: "The closest opportunity you can unlock, and exactly what it still needs from you." },
     { id: "activity", target: "#tour-activity", title: "Recent activity", body: "What you have done lately. Doing something on consecutive days builds your streak." },
-    { id: "nav-plan", target: "[data-tour=nav-plan]", title: "My Plan", body: "A day-by-day study plan for each skill you need to improve." },
+    { id: "nav-plan", target: "[data-tour=nav-plan]", title: "My Plan", body: "What to work on, with a day-by-day study plan for each skill, plus the proof behind every score: your results, your project and your resume claims." },
     { id: "nav-practice", target: "[data-tour=nav-practice]", title: "Practice", body: "Drills, mock tests, interview rehearsal and code challenges. Nothing here counts against you, so it is the place to get things wrong." },
     { id: "nav-arena", target: "[data-tour=nav-arena]", title: "Arena", body: `Timed quiz rounds against other ${role.title} students, with a weekly leaderboard. It never changes your readiness.` },
     { id: "nav-assessments", target: "[data-tour=nav-assessments]", title: "Assessments", body: "Timed tests marked on the server. These are what prove a skill and move your readiness." },
-    { id: "nav-evidence", target: "[data-tour=nav-evidence]", title: "Evidence", body: "Everything that backs up your skills: assessment results, projects, and what you listed on your resume." },
     { id: "nav-jobs", target: "[data-tour=nav-jobs]", title: "Jobs", body: "Opportunities that unlock as your readiness and skills reach what each one asks for." },
     { id: "nav-card", target: "[data-tour=nav-card]", title: "Career Card", body: "Your verified profile to share with recruiters. It is issued after your final verification." },
     { id: "nav-profile", target: "[data-tour=nav-profile]", title: "Profile", body: "Your details, your resume and your target role." },
@@ -329,7 +328,7 @@ export default async function DashboardPage() {
                 ) : null}
               </Panel>
 
-              <Panel title="Recent evidence" action={<Link href="/evidence" className="text-xs font-medium text-primary hover:underline">All →</Link>}>
+              <Panel title="Recent evidence" action={<Link href="/plan?view=history" className="text-xs font-medium text-primary hover:underline">All →</Link>}>
                 <ul className="space-y-2.5 text-sm">
                   {evidence.slice(0, 5).map((e) => (
                     <li key={e.id} className="flex gap-2">

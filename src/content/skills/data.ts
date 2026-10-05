@@ -90,8 +90,8 @@ export const questions: Question[] = [
     prompt: `The employees table has 50 rows; 5 of them have manager_id set to NULL. What does this query return?\n\nSELECT * FROM employees WHERE manager_id = NULL;`,
     options: [
       "No rows, because comparing anything to NULL with = is never true",
-      "The 5 rows where manager_id is NULL",
-      "The 45 rows where manager_id is not NULL",
+      "The 5 rows where manager_id is NULL, because = NULL finds the empty values",
+      "The 45 rows where manager_id is not NULL, because NULL stands for any value",
       "A syntax error, because NULL cannot appear in a WHERE clause",
     ],
     answer: 0,
@@ -274,9 +274,9 @@ export const questions: Question[] = [
     topicId: "python-pandas-groupby-merge",
     prompt: `left has one row each for id 1, 2 and 3. right has one row each for id 2, 3 and 4. What does this produce?\n\npd.merge(left, right, on="id", how="left")`,
     options: [
-      "2 rows: only id 2 and 3",
+      "2 rows: only id 2 and 3, the two ids that appear in both frames",
       "3 rows: id 1, 2 and 3, with NaN in the right-hand columns for id 1",
-      "4 rows: id 1, 2, 3 and 4",
+      "4 rows: id 1, 2, 3 and 4, with NaN wherever one frame has no match",
       "3 rows: id 2, 3 and 4, with NaN in the left-hand columns for id 4",
     ],
     answer: 1,
@@ -340,10 +340,10 @@ export const questions: Question[] = [
     prompt:
       "=VLOOKUP(E2, A2:C100, 3) returns the wrong price for some product IDs and no error. The product list in column A is not sorted. What is the fix?",
     options: [
-      "Change the column index from 3 to 2",
-      "Wrap the formula in IFERROR",
+      "Change the column index from 3 to 2 so it reads the price column",
+      "Wrap the formula in IFERROR to catch the failed lookups",
       "Add FALSE as the fourth argument to force an exact match",
-      "Convert the product IDs in column A to numbers",
+      "Convert the product IDs in column A to numbers so they match E2",
     ],
     answer: 2,
     explanation:
@@ -372,10 +372,10 @@ export const questions: Question[] = [
     prompt:
       "You have 10,000 rows with Date, Region, Product and Revenue. Your manager wants total revenue for each region, broken out by product, in one grid. Which PivotTable layout does this?",
     options: [
-      "Revenue in Rows, Region in Columns, Product in Values",
+      "Revenue in Rows, Region in Columns, Count of Product in Values",
       "Region in Rows, Product in Columns, Sum of Revenue in Values",
-      "Region and Product in Filters, Date in Values",
-      "Date in Rows, Count of Region in Values",
+      "Region and Product in Filters, Count of Date in Values",
+      "Date in Rows, Product in Columns, Count of Region in Values",
     ],
     answer: 1,
     explanation:
@@ -388,10 +388,10 @@ export const questions: Question[] = [
     prompt:
       "You paste 200 new rows directly below a PivotTable's source data and click Refresh, but the totals do not change. What is the most likely cause and fix?",
     options: [
-      "PivotTables cannot be updated; delete it and build a new one",
-      "Calculation mode is set to manual; press F9 to recalculate",
-      "The new rows must be sorted by date before they are included",
-      "The source is a fixed range that excludes the new rows; extend the data source or convert the data to an Excel Table",
+      "A PivotTable cannot take in new rows once built; delete it and build a new one",
+      "Calculation mode is set to manual; press F9 to recalculate the PivotTable totals",
+      "The new rows are skipped until the source is sorted by date; sort it, then refresh",
+      "The source is a fixed range that excludes the new rows; extend it or use an Excel Table",
     ],
     answer: 3,
     explanation:
@@ -449,10 +449,10 @@ export const questions: Question[] = [
     prompt:
       "An A/B test comparing two checkout pages gives a p-value of 0.03, with a significance level of 0.05 chosen in advance. Which interpretation is correct?",
     options: [
-      "There is a 97% probability that the new page is better",
-      "If there were truly no difference, a result at least this extreme would occur about 3% of the time, so the null hypothesis is rejected",
-      "There is a 3% probability that the null hypothesis is true",
-      "The new page improves conversion by a large, practically important amount",
+      "There is a 97% probability that the new page really does convert better than the old page",
+      "If the pages truly did not differ, a result at least this extreme would occur about 3% of the time",
+      "There is only a 3% probability that the null hypothesis of no difference is actually true",
+      "The new page improves conversion by a large amount, because a small p-value always means a big effect",
     ],
     answer: 1,
     explanation:
@@ -476,10 +476,10 @@ export const questions: Question[] = [
     prompt:
       "Users who turn on push notifications have 40% higher 30-day retention than those who do not. A product manager concludes that notifications cause higher retention. What is the strongest critique?",
     options: [
-      "Already-engaged users may be more likely to enable notifications, so the link may be confounded; a randomized experiment is needed",
-      "A 40% difference is too small to matter",
-      "Retention cannot be measured accurately over 30 days",
-      "Correlation can only be calculated between two numeric columns",
+      "Already-engaged users may be the ones who enable notifications, so the link may be confounded",
+      "A 40% difference in retention is too small to be worth acting on, whatever its cause may be",
+      "Retention cannot be measured accurately over only 30 days, so the groups cannot be compared",
+      "Correlation can only be calculated between two numeric columns, and notifications is yes or no",
     ],
     answer: 0,
     explanation:
@@ -492,10 +492,10 @@ export const questions: Question[] = [
     prompt:
       "A simple linear regression on monthly data gives: revenue = 2000 + 3.5 x ad_spend (both in dollars), with R-squared = 0.64. Which statement is correct?",
     options: [
-      "Ad spend explains 3.5% of the variation in revenue",
-      "Each additional $1 of ad spend is associated with about $3.50 more revenue on average",
-      "With zero ad spend, predicted revenue is $3.50",
-      "The correlation between ad spend and revenue is 0.64",
+      "Ad spend explains about 3.5% of the variation in monthly revenue",
+      "Each extra $1 of ad spend is associated with about $3.50 more revenue",
+      "With zero ad spend in a month, the predicted revenue for that month is about $3.50",
+      "The correlation between ad spend and revenue is 0.64, the same as the R-squared",
     ],
     answer: 1,
     explanation:
@@ -542,10 +542,10 @@ export const questions: Question[] = [
     prompt:
       "A bar chart compares satisfaction scores of 96, 97 and 98 for three teams, with the y-axis starting at 95. The last bar looks three times taller than the first. What is the problem?",
     options: [
-      "Bar charts cannot display values above 90",
-      "Bar length encodes the value, so a truncated axis exaggerates small differences; bars should start at zero",
-      "The chart needs a 3D effect to show depth accurately",
-      "There are too few categories for a bar chart",
+      "Bar charts cannot display values above 90 accurately; scores this high need a line chart",
+      "The truncated axis exaggerates small differences; a bar chart's axis should start at zero",
+      "The bars are flat; the chart needs a 3D effect so the differences in height are shown accurately",
+      "Three teams are too few categories for a bar chart; it needs at least five to be fair",
     ],
     answer: 1,
     explanation:
@@ -574,10 +574,10 @@ export const questions: Question[] = [
     prompt:
       "A sales dashboard has 14 charts on one screen, and managers say they cannot find what they need. What is the best first step?",
     options: [
-      "Shrink every chart so more white space is visible",
-      "Identify the few questions the audience must answer, keep the KPIs that serve them on top, and move the rest to drill-down views",
-      "Apply a different color theme to each chart so they are easier to tell apart",
-      "Replace all the charts with one large data table",
+      "Shrink every one of the 14 charts so more white space is visible and the screen looks much less crowded",
+      "Find the few questions managers must answer, keep those KPIs on top and move the rest to drill-downs",
+      "Apply a different color theme to each of the 14 charts so managers can tell them apart at a glance",
+      "Replace all 14 charts with one large data table so every number sits in a single place to search",
     ],
     answer: 1,
     explanation:
@@ -590,10 +590,10 @@ export const questions: Question[] = [
     prompt:
       "A dashboard calculates company-wide average order value by averaging the four regional averages. The number does not match finance's figure. Why?",
     options: [
-      "An average of averages ignores that regions have different order counts; it should be total revenue divided by total orders",
-      "Averages cannot be displayed on dashboards, only totals",
-      "Finance must be using the median instead of the mean",
-      "The regional figures need to be rounded before they are averaged",
+      "An average of averages ignores each region's order count; divide total revenue by total orders",
+      "Dashboard tools cannot calculate averages reliably, only totals; show total revenue instead",
+      "Finance must be using the median order value, not the mean; switch the dashboard to the median",
+      "The regional figures were not rounded first; round each region's average, then average them",
     ],
     answer: 0,
     explanation:
@@ -606,9 +606,9 @@ export const questions: Question[] = [
     prompt:
       "You are presenting one slide to executives showing that the West region declined while the others grew. Which chart title is most effective?",
     options: [
-      "Sales by Region",
-      "Figure 3: Regional Sales Data (Q3)",
-      "Regional Performance Overview",
+      "Sales by Region for Q3, Compared With the Previous Quarter",
+      "Figure 3: Regional Sales Data for Q3, Shown in Thousands of Dollars",
+      "Regional Performance Overview: A Summary of Q3 Sales by Region",
       "West region sales fell 18% in Q3 while every other region grew",
     ],
     answer: 3,
@@ -622,10 +622,10 @@ export const questions: Question[] = [
     prompt:
       "Your line chart shows 8 product lines, but the story is about just one of them falling behind. What is the best way to focus the audience?",
     options: [
-      "Give all 8 lines bright, saturated colors and a large legend",
-      "Remove the other 7 lines completely",
-      "Draw the other 7 lines in light gray and the key line in a strong color with a short annotation",
-      "Split the data into 8 separate pie charts",
+      "Give all 8 lines bright, saturated colors and add a large legend so each one can be looked up",
+      "Remove the other 7 lines completely and show the one product line alone on an empty chart",
+      "Draw the other 7 lines in light gray and the key line in one strong color with a short label",
+      "Split the data into 8 separate pie charts, one per product line, and enlarge the key one",
     ],
     answer: 2,
     explanation:
@@ -640,9 +640,9 @@ export const questions: Question[] = [
     prompt:
       "After importing a CSV, the order_amount column contains values like \"$1,250.00\" and \"$300\", and summing the column fails or returns 0. What is the correct fix?",
     options: [
-      "Sort the column so the largest values come first",
-      "Delete the rows that contain a currency symbol",
-      "Round every value to the nearest whole number",
+      "Sort the column from largest to smallest so the values are recognised as numbers",
+      "Delete the rows that contain a currency symbol, then sum the values that are left",
+      "Round every value to the nearest whole number so the decimals stop blocking the sum",
       "Strip the currency symbol and thousands separators, then convert the column to a numeric type",
     ],
     answer: 3,
@@ -656,10 +656,10 @@ export const questions: Question[] = [
     prompt:
       "After loading a customer file, the US ZIP code \"02134\" appears as 2134. What caused this, and how should it be handled?",
     options: [
-      "The file is corrupted; request a new export",
-      "The column was parsed as a number, dropping the leading zero; ZIP codes are identifiers and should be loaded as text",
-      "The ZIP code is invalid and the row should be deleted",
-      "The value was rounded; increase the number of decimal places",
+      "The file was corrupted during export, losing a character; request a fresh copy of it",
+      "The column was parsed as a number, dropping the leading zero; load ZIP codes as text",
+      "The ZIP code was invalid in the source system; delete the row before any analysis",
+      "The value was rounded on import, dropping a digit; increase the decimal places shown",
     ],
     answer: 1,
     explanation:
@@ -688,10 +688,10 @@ export const questions: Question[] = [
     prompt:
       "The average of a city temperature column comes out as -150 degrees C. Inspecting the data, you see many readings of exactly -999. What is going on, and what should you do?",
     options: [
-      "The sensors recorded extreme cold; keep the values",
-      "The values are in Fahrenheit; convert them to Celsius",
-      "-999 is a placeholder for missing readings; replace it with a true null before computing statistics",
-      "The average is wrong because the column needs to be sorted first",
+      "The sensors recorded real spells of extreme cold; keep the values so the average is honest",
+      "The -999 readings are in Fahrenheit; convert them to Celsius before taking the average",
+      "-999 is a placeholder for missing readings; replace it with a true null before averaging",
+      "The average is wrong because the column must be sorted by date before it is calculated",
     ],
     answer: 2,
     explanation:
@@ -720,10 +720,10 @@ export const questions: Question[] = [
     prompt:
       "Total revenue is 1.0M in the orders table. After joining orders to the customers table on customer_id, total revenue shows 1.4M. What is the most likely cause?",
     options: [
-      "The join converted the revenue to a different currency",
-      "Some customer_id values appear more than once in customers, so their orders were duplicated by the join",
-      "Orders with a missing customer_id were added twice",
-      "Joins always increase numeric totals slightly because of rounding",
+      "The join converted revenue into each customer's local currency, which inflated the total",
+      "Some customer_id values appear more than once in customers, so the join duplicated their orders",
+      "Orders with a missing customer_id were each counted twice, once for each table in the join",
+      "Joins always increase numeric totals slightly, because amounts are rounded up as rows are matched",
     ],
     answer: 1,
     explanation:
@@ -747,10 +747,10 @@ export const questions: Question[] = [
     prompt:
       "Your cleaning script ran without errors. Which check best confirms that it did not silently lose or distort data?",
     options: [
-      "Reconcile row counts and key totals before and after cleaning, and account for every dropped row",
-      "Confirm that the output file is smaller than the input file",
-      "Look at the first 10 rows of the output",
-      "Run the script a second time and confirm it finishes again",
+      "Reconcile row counts and key totals before and after cleaning, and explain every dropped row",
+      "Confirm that the output file is smaller than the input file, which shows bad rows were removed",
+      "Look at the first 10 rows of the output and confirm that every column looks clean and tidy",
+      "Run the script a second time and confirm it finishes again without any errors or warnings",
     ],
     answer: 0,
     explanation:

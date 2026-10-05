@@ -10,7 +10,7 @@ import type { NextAction } from "@/lib/next-action";
 import { KNOWLEDGE_ONLY_CAP } from "@/lib/readiness";
 
 /** One line of the breakdown: a skill (with the role's target) or, in a single-skill assessment, a topic. */
-export type ResultLine = { id: string; name: string; pct: number; correct: number; total: number; target?: number; href?: string };
+export type ResultLine = { id: string; name: string; pct: number; correct: number; total: number; /** The range the level likely lies in, when it was estimated. */ low?: number; high?: number; target?: number; href?: string };
 
 export type ResultViewProps = {
   title: string;
@@ -62,7 +62,7 @@ export function ResultView({ title, kind, verified, score, impact, lines, topics
         </div>
         <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 sm:grid-cols-2">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-white/70">Your score</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-white/70">{topics ? "Your level" : "Average level"}</p>
             <p className="mt-1 text-6xl font-semibold tabular-nums tracking-tight">{score.pct}%</p>
             <p className="mt-1 text-white/85">{score.correct} of {score.total} correct</p>
           </div>
@@ -159,7 +159,7 @@ export function ResultView({ title, kind, verified, score, impact, lines, topics
           <p className="text-sm text-muted-foreground">
             Multiple-choice questions show knowledge. The top band is kept for demonstrated ability, so a level is held at {KNOWLEDGE_ONLY_CAP}% until
             there is{" "}
-            <Link href="/plan#project" className="font-medium text-primary hover:underline">project evidence</Link> or a passed interview for it.
+            <Link href="/plan?view=project" className="font-medium text-primary hover:underline">project evidence</Link> or a passed interview for it.
           </p>
           <ul className="mt-3 space-y-1.5 text-sm">
             {capped.map((p) => (
@@ -189,7 +189,7 @@ export function ResultView({ title, kind, verified, score, impact, lines, topics
           </details>
         ) : null}
         {kind === "baseline" ? (
-          <p className="mt-4 text-xs text-muted-foreground">Harder questions count for more, and the baseline asks only 3 per skill, so these levels are rough. A skill assessment gives a sharper reading.</p>
+          <p className="mt-4 text-xs text-muted-foreground">Each level is an estimate from a handful of questions, so it comes with the range it likely lies in. The lighter band on each bar is that range. A skill assessment narrows it.</p>
         ) : null}
       </Panel>
 
@@ -241,17 +241,21 @@ function Takeaway({ label, value, sub, tone }: { label: string; value: string; s
 
 function Line({ line }: { line: ResultLine }) {
   const ok = shortfall(line) >= 0;
+  const ranged = line.low !== undefined && line.high !== undefined;
+  const tone = ok ? "bg-emerald-500" : line.pct >= 50 ? "bg-amber-500" : "bg-rose-500";
   const body: ReactNode = (
     <>
       <div className="flex items-baseline justify-between gap-3 text-sm">
         <span className="font-medium">{line.name}</span>
-        <span className="shrink-0 font-semibold tabular-nums">{line.pct}%</span>
+        <span className="shrink-0 font-semibold tabular-nums">{ranged ? "about " : ""}{line.pct}%</span>
       </div>
       <div className="relative mt-2 h-1.5 rounded-full bg-foreground/10">
-        <div className={cn("h-full rounded-full", ok ? "bg-emerald-500" : line.pct >= 50 ? "bg-amber-500" : "bg-rose-500")} style={{ width: `${line.pct}%` }} />
+        {ranged ? <div className={cn("absolute inset-y-0 rounded-full opacity-30", tone)} style={{ left: `${line.low}%`, width: `${Math.max(line.high! - line.low!, 1)}%` }} aria-hidden /> : null}
+        <div className={cn("relative h-full rounded-full", tone)} style={{ width: `${line.pct}%` }} />
         {line.target !== undefined ? <div className="absolute -top-1 h-3.5 w-0.5 rounded bg-foreground/60" style={{ left: `${line.target}%` }} aria-hidden /> : null}
       </div>
       <p className="mt-1.5 text-xs text-muted-foreground">
+        {ranged ? `Likely ${line.low}–${line.high}% · ` : ""}
         {line.correct} of {line.total} correct{line.target !== undefined ? (ok ? " · at target" : ` · target ${line.target}%`) : ""}
       </p>
     </>

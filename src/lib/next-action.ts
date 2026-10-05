@@ -136,7 +136,7 @@ export function rankNextActions(
         "Raises evidence confidence on the skills it covers",
       ],
       action: "View project brief",
-      href: "/plan#project",
+      href: "/plan?view=project",
       blocksJobs: needing,
     };
     // After critical gaps, before everything else.

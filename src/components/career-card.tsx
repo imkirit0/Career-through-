@@ -1,111 +1,139 @@
-import { BadgeCheck, FolderGit2 } from "lucide-react";
+import { BadgeCheck, Check, FolderGit2 } from "lucide-react";
 import { cn } from "cn";
 import type { Role } from "@/content/taxonomy";
-import { CONFIDENCE_LABELS, type EvidenceItem, type Readiness } from "@/lib/readiness";
+import type { EvidenceItem, Readiness } from "@/lib/readiness";
 import { shortDate } from "@/lib/format";
 import { LogoMark } from "./logo-mark";
-import { Chip, Gauge, LevelBar } from "./bits";
+import { Gauge } from "./bits";
 
-const STATUS_STYLE = { Ready: "bg-emerald-500/10 text-emerald-700 ring-emerald-500/20", Developing: "bg-amber-500/10 text-amber-700 ring-amber-500/20", "Not yet ready": "bg-foreground/5 text-foreground/70 ring-foreground/10" };
+type Status = "Ready" | "Developing" | "Not yet ready";
+type Skill = Readiness["perSkill"][number];
 
 /** The verified career identity. Same component for the private view and the public page. */
-export function CareerCard({ name, headline, role, readiness, evidence, status, issuedAt }: { name: string; headline?: string; role: Role; readiness: Readiness; evidence: EvidenceItem[]; status: keyof typeof STATUS_STYLE; issuedAt?: Date | null }) {
+export function CareerCard({ name, headline, role, readiness, evidence, status, issuedAt }: { name: string; headline?: string; role: Role; readiness: Readiness; evidence: EvidenceItem[]; status: Status; issuedAt?: Date | null }) {
   const technical = readiness.perSkill.filter((p) => p.dimension === "technical");
-  const stale = readiness.perSkill.filter((p) => p.reassessRecommended);
   const other = readiness.perSkill.filter((p) => p.dimension !== "technical");
+  const stale = readiness.perSkill.filter((p) => p.reassessRecommended);
   const project = evidence.find((e) => e.type === "project");
   const assessed = evidence.filter((e) => e.type === "assessment");
   const attemptsTaken = new Set(assessed.map((e) => e.refId).filter(Boolean)).size;
   const lastVerified = assessed[0]?.createdAt;
-  const verifiedCount = readiness.perSkill.filter((p) => p.assessed).length;
 
   return (
-    <article className="group relative overflow-hidden rounded-3xl border border-white/60 bg-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-2xl transition-all duration-700 hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)] hover:bg-white/60 dark:border-white/10 dark:bg-black/40 dark:hover:bg-black/50">
-      <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/10 blur-[60px] transition-transform duration-1000 group-hover:scale-125" aria-hidden />
-      <div className="pointer-events-none absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-indigo-500/10 blur-[60px] transition-transform duration-1000 group-hover:scale-125" aria-hidden />
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-white/40 to-white/0 opacity-50 dark:from-white/10" />
-      
-      <header className="relative z-10 grid gap-6 p-7 sm:grid-cols-[1fr_220px] sm:p-9">
-        <div className="relative z-10">
-          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-primary/80"><LogoMark className="size-5" />Career Through · Verified identity</p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground/90">{name}</h1>
-          {headline ? <p className="mt-1.5 font-medium text-muted-foreground">{headline}</p> : null}
-          <p className="mt-6 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70">Target role</p>
-          <p className="text-xl font-bold text-foreground/80">{role.title}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Chip className={STATUS_STYLE[status]}>{status}</Chip>
-            <Chip className="bg-primary/10 font-bold text-primary ring-primary/20">{readiness.band.label}</Chip>
+    <article className="overflow-hidden rounded-3xl border border-foreground/10 bg-card shadow-[0_12px_40px_-12px_rgb(0,0,0,0.18)]">
+      {/* The pass: who, what for, and how ready. */}
+      <header className="surface-hero overflow-hidden p-6 sm:p-9">
+        <LogoMark className="pointer-events-none !absolute -bottom-16 -right-10 size-72 opacity-[0.12] saturate-0 brightness-200" />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+            <span className="grid size-8 place-items-center rounded-xl bg-white"><LogoMark className="size-5" /></span>
+            Career Through · Career Card
+          </p>
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold", status === "Ready" ? "bg-emerald-400 text-emerald-950" : "bg-white/15 text-white ring-1 ring-inset ring-white/25")}>
+            {status === "Ready" ? <BadgeCheck className="size-3.5" aria-hidden /> : null}
+            {status}
+          </span>
+        </div>
+
+        <div className="mt-8 grid items-end gap-8 sm:grid-cols-[1fr_auto]">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{name}</h1>
+            {headline ? <p className="mt-1.5 max-w-xl text-sm text-white/75 sm:text-base">{headline}</p> : null}
+            <p className="mt-6 text-xs font-medium uppercase tracking-[0.14em] text-white/60">Target role</p>
+            <p className="mt-0.5 text-xl font-semibold">{role.title}</p>
+          </div>
+          <div className="w-44 justify-self-start sm:justify-self-end">
+            <Gauge score={readiness.score} label={readiness.band.label} light />
           </div>
         </div>
-        <Gauge score={readiness.score} label="Career readiness" />
+
+        <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-white/15 pt-5 sm:grid-cols-4">
+          <Figure label="Skills at target" value={`${readiness.perSkill.filter((p) => p.assessed && p.gap >= 0).length} of ${readiness.perSkill.length}`} />
+          <Figure label="Assessments" value={String(attemptsTaken)} />
+          <Figure label="Project" value={project ? "Submitted" : "None yet"} />
+          <Figure label="Last verified" value={lastVerified ? shortDate(lastVerified) : "Not yet"} />
+        </dl>
       </header>
 
-      <dl className="relative z-10 grid grid-cols-2 divide-x divide-foreground/5 border-b border-t border-foreground/5 bg-foreground/[0.02] sm:grid-cols-4 sm:divide-y-0">
-        <div className="p-4 sm:p-6">
-          <dt className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Verified skills</dt>
-          <dd className="mt-2 text-2xl font-bold tabular-nums text-foreground/80">{verifiedCount}<span className="text-sm font-medium text-muted-foreground/50"> / {readiness.perSkill.length}</span></dd>
-        </div>
-        <div className="p-4 sm:p-6">
-          <dt className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Assessments</dt>
-          <dd className="mt-2 text-2xl font-bold tabular-nums text-foreground/80">{attemptsTaken}</dd>
-        </div>
-        <div className="p-4 sm:p-6">
-          <dt className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Projects</dt>
-          <dd className="mt-2 text-2xl font-bold text-foreground/80">{project ? "1" : "—"}</dd>
-        </div>
-        <div className="p-4 sm:p-6">
-          <dt className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Last verified</dt>
-          <dd className="mt-2 text-sm font-bold text-foreground/80">{lastVerified ? shortDate(lastVerified) : "Not yet"}</dd>
-        </div>
-      </dl>
+      <div className="space-y-8 p-6 sm:p-9">
+        <SkillGroup title="Role skills" skills={technical} />
+        <SkillGroup title="Aptitude & workplace" skills={other} />
 
-      <div className="relative z-10 grid gap-8 p-7 sm:p-9 lg:grid-cols-2">
-        <section>
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-primary/70">Role-specific skills</h2>
-          <ul className="mt-5 space-y-6">{technical.map((p) => <CardSkill key={p.skillId} p={p} />)}</ul>
-        </section>
-        <div className="space-y-10">
+        {project ? (
           <section>
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-primary/70">Aptitude & workplace</h2>
-            <ul className="mt-5 space-y-6">{other.map((p) => <CardSkill key={p.skillId} p={p} />)}</ul>
-            <p className="mt-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Interview readiness: not yet assessed.</p>
-          </section>
-          <section>
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-primary/70">Project evidence</h2>
-            {project ? (
-              <div className="mt-4 flex items-start gap-4 rounded-2xl border border-white/40 bg-white/40 p-5 shadow-sm backdrop-blur-md">
-                <FolderGit2 className="mt-0.5 size-5 shrink-0 text-primary/70" aria-hidden />
-                <div>
-                  <p className="text-sm font-bold text-foreground/80">{project.detail?.title}</p>
-                  <a href={project.url ?? "#"} target="_blank" rel="noopener noreferrer nofollow" className="mt-1 block break-all text-sm font-medium text-primary/80 hover:text-primary hover:underline">{project.url}</a>
-                  <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Submitted {shortDate(project.createdAt)} · link {project.detail?.status === "recorded" ? "validated" : "pending"} · not reviewed</p>
-                </div>
+            <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Project</h2>
+            <div className="mt-3 flex items-start gap-3 rounded-2xl border border-foreground/10 p-4">
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><FolderGit2 className="size-4" aria-hidden /></span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">{project.detail?.title}</p>
+                <a href={project.url ?? "#"} target="_blank" rel="noopener noreferrer nofollow" className="mt-0.5 block break-all text-sm text-primary hover:underline">{project.url}</a>
+                <p className="mt-1 text-xs text-muted-foreground">Submitted {shortDate(project.createdAt)} · link {project.detail?.status === "recorded" ? "validated" : "pending"} · not human-reviewed</p>
               </div>
-            ) : <p className="mt-4 text-sm font-medium text-muted-foreground/60">No project on record.</p>}
+            </div>
           </section>
-        </div>
+        ) : null}
       </div>
 
-      <footer className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-t border-foreground/5 bg-foreground/[0.02] px-7 py-5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60 sm:px-9">
-        <span className="flex items-center gap-2"><BadgeCheck className="size-4 text-primary/70" aria-hidden />{verifiedCount} of {readiness.perSkill.length} skills backed by verified assessments</span>
-        <span>{stale.length ? `${stale.length} skill${stale.length === 1 ? "" : "s"} due for reassessment · ` : ""}{lastVerified ? `Last verified ${shortDate(lastVerified)}` : "Not yet verified"}{issuedAt ? ` · Issued ${shortDate(issuedAt)}` : ""} · {readiness.formulaVersion}</span>
+      <footer className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-foreground/10 bg-foreground/[0.03] px-6 py-4 text-xs text-muted-foreground sm:px-9">
+        <span className="flex items-center gap-1.5">
+          <BadgeCheck className="size-4 text-primary" aria-hidden />
+          Levels come from timed, server-scored assessments. Interview readiness is not assessed.
+        </span>
+        <span>
+          {stale.length ? `${stale.length} skill${stale.length === 1 ? "" : "s"} due for a retest · ` : ""}
+          {issuedAt ? `Issued ${shortDate(issuedAt)} · ` : ""}
+          {readiness.formulaVersion}
+        </span>
       </footer>
     </article>
   );
 }
 
-function CardSkill({ p }: { p: Readiness["perSkill"][number] }) {
+function Figure({ label, value }: { label: string; value: string }) {
   return (
-    <li>
-      <div className="flex items-center justify-between gap-2 text-sm">
-        <span className="font-bold text-foreground/80">{p.name}</span>
-        <span className="flex items-center gap-2 tabular-nums">
-          <span className="font-bold text-foreground/80">{p.level}%</span>
-          <span className={cn("text-xs font-bold", p.assessed && p.gap >= 0 ? "text-emerald-600" : "text-muted-foreground/60")}>{p.assessed ? (p.gap >= 0 ? "✓ Verified" : "Developing") : "Unverified"}</span>
+    <div className="flex flex-col-reverse">
+      <dt className="text-xs text-white/60">{label}</dt>
+      <dd className="text-base font-semibold tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+function SkillGroup({ title, skills }: { title: string; skills: Skill[] }) {
+  if (!skills.length) return null;
+  return (
+    <section>
+      <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{title}</h2>
+      <ul className="mt-3 grid gap-3 sm:grid-cols-2">{skills.map((p) => <CardSkill key={p.skillId} p={p} />)}</ul>
+    </section>
+  );
+}
+
+function CardSkill({ p }: { p: Skill }) {
+  const proven = p.assessed && p.gap >= 0;
+  return (
+    <li className="rounded-2xl border border-foreground/10 p-4">
+      <div className="flex items-center gap-3">
+        <span
+          className={cn(
+            "grid size-7 shrink-0 place-items-center rounded-full",
+            proven ? "bg-emerald-500 text-white" : p.assessed ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" : "bg-foreground/5 text-muted-foreground",
+          )}
+          aria-hidden
+        >
+          {proven ? <Check className="size-4" strokeWidth={3} /> : <span className="size-1.5 rounded-full bg-current" />}
         </span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{p.name}</span>
+        <span className="text-base font-semibold tabular-nums">{p.level}%</span>
       </div>
-      <div className="mt-2"><LevelBar level={p.level} target={p.target} status={p.status} label={p.name} /></div>
-      <p className="mt-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Target {p.target}% · {CONFIDENCE_LABELS[p.confidence]}{p.lastVerifiedAt ? ` · ${shortDate(p.lastVerifiedAt)}` : ""}</p>
+      {/* Thin level bar; the notch is the role's target. */}
+      <div className="relative mt-3 h-1.5 rounded-full bg-foreground/10" role="meter" aria-label={p.name} aria-valuemin={0} aria-valuemax={100} aria-valuenow={p.level} aria-valuetext={`${p.level}% of a ${p.target}% target`}>
+        <div className={cn("h-full rounded-full", proven ? "bg-emerald-500" : p.assessed ? "bg-amber-500" : "bg-foreground/30")} style={{ width: `${p.level}%` }} />
+        <span className="absolute top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-foreground" style={{ left: `${p.target}%` }} aria-hidden />
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        {proven ? "Verified" : p.assessed ? `Assessed, below the ${p.target}% target` : "Self-reported, not verified"}
+        {p.lastVerifiedAt ? ` · ${shortDate(p.lastVerifiedAt)}` : ""}
+      </p>
     </li>
   );
 }

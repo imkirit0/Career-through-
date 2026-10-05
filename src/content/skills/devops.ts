@@ -145,8 +145,8 @@ export const questions: Question[] = [
     prompt:
       "You own deploy.sh and `ls -l` shows `-rw-r--r--`. Running `./deploy.sh` fails with \"Permission denied\". What is the most appropriate fix?",
     options: [
-      "Run `chown root deploy.sh`",
-      "Rename it to deploy.bash",
+      "Run `chown root deploy.sh` to make root the owner",
+      "Rename it to deploy.bash so the shell recognises it",
       "Run `chmod 777 /` so everything is accessible",
       "Run `chmod +x deploy.sh` to add the execute bit",
     ],
@@ -160,10 +160,10 @@ export const questions: Question[] = [
     topicId: "linux-processes",
     prompt: "You run `kill 4321` with no other flags. What happens?",
     options: [
-      "SIGKILL is sent and the kernel terminates the process immediately",
-      "The process is paused until you run `fg`",
-      "SIGTERM is sent, asking the process to shut down; the process can catch it and clean up",
-      "Nothing, because `kill` requires a signal flag",
+      "SIGKILL is sent; the kernel ends the process at once, with no clean-up",
+      "SIGSTOP is sent; the process is paused until you run `fg`",
+      "SIGTERM is sent; the process can catch it and shut down cleanly",
+      "Nothing is sent; `kill` prints a usage error without a signal flag",
     ],
     answer: 2,
     explanation:
@@ -192,10 +192,10 @@ export const questions: Question[] = [
     prompt:
       "In access.log the client IP is the first field of each line. What does this pipeline print?\n\nawk '{print $1}' access.log | sort | uniq -c | sort -rn | head -5",
     options: [
-      "The first 5 lines of the log, sorted alphabetically",
+      "The first 5 IPs in alphabetical order, each with its request count",
       "The 5 IPs with the most requests, each with its request count",
-      "The 5 IPs that appear exactly once",
-      "The total number of unique IPs",
+      "The 5 IPs that appear exactly once in the log, without any counts",
+      "The total number of unique IPs, followed by the first 5 of them",
     ],
     answer: 1,
     explanation:
@@ -208,10 +208,10 @@ export const questions: Question[] = [
     prompt:
       "missing.txt does not exist and the mkdir succeeds. What does this script do?\n\n#!/bin/bash\nset -e\nmkdir /opt/app\ncp missing.txt /opt/app/\necho \"done\"",
     options: [
-      "Prints an error for cp, then prints \"done\" and exits with status 0",
-      "Refuses to start because of a syntax error",
-      "Skips the cp silently and prints \"done\"",
-      "Prints an error for cp and exits immediately with a non-zero status; \"done\" is never printed",
+      "Prints an error for cp, then carries on, prints \"done\" and exits with status 0",
+      "Exits before mkdir runs, because `set -e` first checks that every file the script names exists",
+      "Skips the failed cp without any message, prints \"done\" and exits with status 0",
+      "Prints an error for cp, then exits with a non-zero status without printing \"done\"",
     ],
     answer: 3,
     explanation:
@@ -237,10 +237,10 @@ export const questions: Question[] = [
     prompt:
       "Developers work on long-lived branches for weeks and every merge causes painful conflicts and surprise bugs. Which practice addresses this most directly?",
     options: [
-      "Freezing the main branch until release week",
-      "Running all tests manually before each release",
-      "Giving each developer a separate production environment",
-      "Merging small changes into the main branch frequently, with an automated build and test run on each one",
+      "Freezing the main branch until release week, then merging every branch in one planned session",
+      "Keeping the long-lived branches, but running the full test suite by hand before each release",
+      "Giving each developer a separate production-like environment to test their own branch in",
+      "Merging small changes into main frequently, with an automated build and test run on each merge",
     ],
     answer: 3,
     explanation:
@@ -253,10 +253,10 @@ export const questions: Question[] = [
     prompt:
       "A GitHub Actions workflow has only this trigger:\n\non:\n  push:\n    branches: [main]\n\nA developer pushes commits to a branch called feature/login and opens a pull request into main. When does the workflow run?",
     options: [
-      "Not for the feature-branch pushes or the PR; only when commits land on main, for example after the merge",
-      "On every push to feature/login",
-      "As soon as the pull request is opened",
-      "Never, because a push trigger requires a tag",
+      "Only when commits land on main, for example when the pull request is merged",
+      "On every push to feature/login, because a push to any branch starts the workflow",
+      "As soon as the pull request is opened, because its target branch is main",
+      "Never, because a push trigger with a branch filter also requires a tag",
     ],
     answer: 0,
     explanation:
@@ -285,10 +285,10 @@ export const questions: Question[] = [
     prompt:
       "A pipeline's stages run in this order: deploy to staging (15 min), end-to-end tests (20 min), then lint and unit tests (3 min). Developers often wait 35+ minutes to learn about a typo. What is the best change?",
     options: [
-      "Remove the lint and unit test stage since it is the shortest",
+      "Remove the lint and unit test stage, since it is the shortest and runs last anyway",
       "Run lint and unit tests first so cheap checks fail fast before the slow stages",
-      "Run the pipeline only once a day",
-      "Add more end-to-end tests to catch typos earlier",
+      "Run the pipeline only once a day, so developers wait for a single nightly result",
+      "Add more end-to-end tests so that typos are caught before the unit test stage",
     ],
     answer: 1,
     explanation:
@@ -317,10 +317,10 @@ export const questions: Question[] = [
     prompt:
       "The deploy job needs a cloud API key. Which approach is appropriate?",
     options: [
-      "Store it in the CI platform's encrypted secrets and expose it to the deploy job as an environment variable",
-      "Commit it in the pipeline YAML, since the repository is private",
-      "Base64-encode it and commit it to the repository",
-      "Print it at the start of the job log so teammates can debug with it",
+      "Store it as an encrypted CI secret and expose it to the deploy job as an environment variable",
+      "Commit it in the pipeline YAML, since the repository is private and only the team can read it",
+      "Base64-encode it and commit it to the repository, so that the plain key never appears in a file",
+      "Pass it as a plain pipeline variable and print it in the job log so teammates can debug with it",
     ],
     answer: 0,
     explanation:
@@ -346,10 +346,10 @@ export const questions: Question[] = [
     prompt:
       "With this Dockerfile, every source-code change makes the build reinstall all dependencies:\n\nFROM node:20\nWORKDIR /app\nCOPY . .\nRUN npm ci\nCMD [\"node\", \"server.js\"]\n\nWhat is the best fix?",
     options: [
-      "Add --no-cache to the docker build command",
+      "Add --no-cache to the docker build command, so that every layer is rebuilt from a clean state",
       "Copy package.json and package-lock.json first, run npm ci, then COPY the rest of the source",
-      "Move the CMD line above RUN npm ci",
-      "Switch the base image to ubuntu and install Node manually",
+      "Move the CMD line above RUN npm ci, so that the install becomes the last layer in the image",
+      "Switch the base image to ubuntu and install Node in a RUN step before the COPY line",
     ],
     answer: 1,
     explanation:
@@ -393,10 +393,10 @@ export const questions: Question[] = [
     prompt:
       "You start a container with `docker run -d myapp`. A few seconds later `docker ps` does not list it. What is the most useful next step to find out why?",
     options: [
-      "Run `docker exec -it <container> sh` to look around inside it",
-      "Run `docker top <container>` to list its processes",
-      "Run `docker ps -a` to find the exited container, then `docker logs <container>` to read its output",
-      "Run `docker pull myapp` to refresh the image",
+      "Run `docker exec -it <container> sh` to open a shell inside it and look for what went wrong",
+      "Run `docker top <container>` to list its processes, then `docker stats` to check its memory use",
+      "Run `docker ps -a` to find the exited container, then `docker logs <container>` for its output",
+      "Run `docker pull myapp` to refresh the image, then `docker run -d myapp` again to retry it",
     ],
     answer: 2,
     explanation:
@@ -409,10 +409,10 @@ export const questions: Question[] = [
     prompt:
       "A teammate runs PostgreSQL with `docker run -d postgres:16`. After `docker rm -f` and starting a new container, all data is gone. What prevents this?",
     options: [
-      "Adding --restart always",
+      "Adding --restart always, so that Docker brings the same container back after it is removed",
       "Mounting a named volume at the data directory, e.g. -v pgdata:/var/lib/postgresql/data",
-      "Publishing the port with -p 5432:5432",
-      "Tagging the image with a fixed version",
+      "Publishing the port with -p 5432:5432, so that the data is reachable from the host machine",
+      "Tagging the image with a fixed version, e.g. postgres:16.2, so each new container matches it",
     ],
     answer: 1,
     explanation:
@@ -425,9 +425,9 @@ export const questions: Question[] = [
     prompt:
       "Containers named api and db are both attached to a user-defined bridge network called appnet. db listens on 5432. How should api connect to the database?",
     options: [
-      "localhost:5432, because both containers are on the same machine",
-      "It cannot until db publishes the port with -p 5432:5432",
-      "The host machine's public IP on port 5432",
+      "localhost:5432, because both containers run on the same machine and share its loopback address",
+      "It cannot connect at all until db publishes the port to the host with -p 5432:5432",
+      "The host machine's public IP on port 5432, because traffic between containers leaves via the host",
       "db:5432, because Docker's built-in DNS resolves container names on user-defined networks",
     ],
     answer: 3,
@@ -441,10 +441,10 @@ export const questions: Question[] = [
     prompt:
       "In a compose file, the web service has:\n\ndepends_on:\n  - db\n\nwith no condition or healthcheck configured. What does this guarantee?",
     options: [
-      "The db container is started before web, but not that the database is ready to accept connections",
-      "web starts only after the database accepts connections",
-      "web is restarted automatically whenever db restarts",
-      "web and db share the same filesystem",
+      "db is started before web, but not that the database is ready to accept connections",
+      "db is started before web, and web waits until the database is accepting connections",
+      "web is restarted automatically whenever db restarts, so that it reconnects to the database",
+      "web and db share the same filesystem, so web can read the database's files directly",
     ],
     answer: 0,
     explanation:
@@ -475,10 +475,10 @@ export const questions: Question[] = [
     prompt:
       "Your company runs an application on plain virtual machines (IaaS) from a major cloud provider. A critical vulnerability is announced in the VMs' Linux distribution. Under the shared responsibility model, who must patch the guest operating system?",
     options: [
-      "The cloud provider, as part of the VM service",
-      "The Linux distribution's vendor, remotely",
+      "The cloud provider, because patching is part of the VM service",
+      "The Linux distribution's vendor, because it pushes fixes to every running VM",
       "Your company, because the customer manages the guest OS on IaaS",
-      "Nobody; VMs are patched automatically on reboot",
+      "Nobody, because IaaS VMs pull security patches automatically on reboot",
     ],
     answer: 2,
     explanation:
@@ -523,9 +523,9 @@ export const questions: Question[] = [
     prompt:
       "You are installing a database on a cloud VM. It needs a low-latency disk with a normal filesystem, and the data must survive if the VM is stopped or replaced. Which option fits?",
     options: [
-      "The VM's ephemeral (instance-local) disk",
-      "Object storage mounted as the database's data directory",
-      "A serverless function's temporary storage",
+      "The VM's ephemeral (instance-local) disk, which is the fastest storage it has",
+      "Object storage (for example Amazon S3) mounted as the database's data directory",
+      "A serverless function's temporary storage (for example /tmp in AWS Lambda)",
       "A persistent network-attached block storage volume (for example Amazon EBS)",
     ],
     answer: 3,
@@ -571,10 +571,10 @@ export const questions: Question[] = [
     prompt:
       "A web application runs on a single VM in one availability zone. The business wants it to stay up even if that data center has an outage. What is the most appropriate change?",
     options: [
-      "Move the app to a much larger VM in the same zone",
+      "Move the app to a much larger, more reliable VM type in the same zone",
       "Run instances in at least two availability zones behind a load balancer",
-      "Take daily snapshots of the VM",
-      "Add a second network interface to the VM",
+      "Take daily snapshots of the VM so that it can be rebuilt by hand after an outage",
+      "Add a second network interface to the VM in case the first one loses its connection",
     ],
     answer: 1,
     explanation:
@@ -587,10 +587,10 @@ export const questions: Question[] = [
     prompt:
       "A team's development VMs run 24/7 but are only used on weekdays from 9 to 6. Billing is per second of running compute. What is the most direct way to cut the bill?",
     options: [
-      "Upgrade to larger VMs so work finishes faster",
-      "Spread the VMs across more availability zones",
-      "Move the VMs to a region closer to the developers",
-      "Automatically stop the VMs outside working hours and start them again in the morning",
+      "Upgrade to larger VMs so that work finishes faster and fewer hours are billed",
+      "Spread the VMs across more availability zones so that each zone bills for less",
+      "Move the VMs to a region closer to the developers so that their sessions are faster",
+      "Automatically stop the VMs outside working hours and start them each working day",
     ],
     answer: 3,
     explanation:
@@ -616,10 +616,10 @@ export const questions: Question[] = [
     prompt:
       "On a database server, `ss -tlnp` shows PostgreSQL listening on 127.0.0.1:5432. The firewall allows port 5432, but other machines get connection errors. What is the most likely cause?",
     options: [
-      "The service is bound only to the loopback interface, so it accepts connections only from the server itself",
-      "Port 5432 is reserved and cannot be used over a network",
-      "PostgreSQL uses UDP, which the firewall rule does not cover",
-      "DNS has no record for 127.0.0.1",
+      "The service is bound only to the loopback interface, so only the server itself can connect",
+      "Port 5432 is reserved for local use, so the kernel never accepts remote connections on it",
+      "PostgreSQL uses UDP for remote clients, which a firewall rule for TCP port 5432 does not cover",
+      "DNS has no record for 127.0.0.1, so the other machines cannot look up the server's address",
     ],
     answer: 0,
     explanation:
@@ -643,10 +643,10 @@ export const questions: Question[] = [
     prompt:
       "You update an A record to a new server IP. The record's TTL was 3600. For the next hour some users still reach the old server while others reach the new one. Why?",
     options: [
-      "The DNS change failed and must be re-applied",
+      "The DNS change failed for some users and must be applied again before they see it",
       "Resolvers that cached the old answer keep serving it until the TTL expires",
-      "Browsers ignore DNS for sites they have visited before",
-      "A records only take effect at midnight UTC",
+      "Browsers skip DNS for any site visited before and keep its first address permanently",
+      "A record changes take effect only at midnight UTC, whatever the TTL is",
     ],
     answer: 1,
     explanation:
@@ -659,10 +659,10 @@ export const questions: Question[] = [
     prompt:
       "Users get \"502 Bad Gateway\" from a site where nginx acts as a reverse proxy in front of an application server. Where should you look first?",
     options: [
-      "The user's browser cache",
-      "The site's DNS records",
-      "The upstream application: is it running, and is nginx pointing at the right host and port?",
-      "The user's login credentials",
+      "The user's browser cache: is it serving a stale copy of an old error page?",
+      "The site's DNS records: does the domain still resolve to the nginx server's address?",
+      "The upstream application: is it running, and is nginx pointing at the right port?",
+      "The user's login credentials: has the session expired or the password been changed?",
     ],
     answer: 2,
     explanation:
@@ -676,9 +676,9 @@ export const questions: Question[] = [
       "A browser shows a certificate name-mismatch error for https://api.example.com. The server presents a valid, unexpired certificate issued only for www.example.com. What is the cause?",
     options: [
       "api.example.com is not listed in the certificate's subject alternative names",
-      "The server is using port 443 instead of port 80",
-      "The certificate authority is offline",
-      "TLS certificates cannot be used for subdomains",
+      "The server answers HTTPS on port 443, but the certificate was issued for port 80",
+      "The certificate authority that issued it is offline, so the browser cannot check the name",
+      "TLS certificates cannot be issued for more than one subdomain of the same domain",
     ],
     answer: 0,
     explanation:
@@ -691,10 +691,10 @@ export const questions: Question[] = [
     prompt:
       "A load balancer distributes traffic across three backend servers and runs health checks against /health. One server starts failing its health checks. What does the load balancer do?",
     options: [
-      "Stops sending traffic to all three servers until an operator intervenes",
-      "Keeps sending it one third of the traffic",
-      "Reboots the failing server",
-      "Stops routing new requests to the failing server and spreads traffic across the two healthy ones",
+      "Stops sending traffic to all three servers until an operator marks the pool as healthy",
+      "Keeps sending it one third of the traffic, because health checks are only used for reporting",
+      "Reboots the failing server and holds its share of requests in a queue until it returns",
+      "Stops routing new requests to the failing server and sends them to the two healthy ones",
     ],
     answer: 3,
     explanation:
@@ -707,10 +707,10 @@ export const questions: Question[] = [
     prompt:
       "`curl http://10.0.2.15:8080` fails instantly with \"Connection refused\". What is the most likely explanation?",
     options: [
-      "DNS could not resolve the hostname",
+      "DNS could not resolve the hostname, so no connection was attempted",
       "The host is reachable, but no process is listening on port 8080",
-      "A firewall is silently dropping the packets",
-      "The server's TLS certificate has expired",
+      "A firewall is silently dropping the packets sent to port 8080",
+      "The server's TLS certificate has expired, so the handshake fails",
     ],
     answer: 1,
     explanation:
@@ -741,9 +741,9 @@ export const questions: Question[] = [
     prompt:
       "A firewall rule is managed by Terraform. During an incident someone opens an extra port by hand in the cloud console and does not update the code. What will the next `terraform plan` show?",
     options: [
-      "Nothing, because Terraform only looks at its code",
-      "An error that stops all further use until the state is deleted",
-      "A proposal to update the code file to include the new port",
+      "No changes, because plan compares the code only with the saved state file",
+      "An error that blocks every further plan until the state file is deleted and rebuilt",
+      "A proposal to rewrite the code file so that it includes the newly opened port",
       "The drift: a proposed change that reverts the rule to what the code declares",
     ],
     answer: 3,
@@ -768,10 +768,10 @@ export const questions: Question[] = [
     prompt:
       "`terraform plan` marks a database instance with `-/+` and the note \"must be replaced\", and the summary reads \"Plan: 1 to add, 0 to change, 1 to destroy\". What will apply do?",
     options: [
-      "Update the database in place with no interruption",
-      "Add a second database and keep the existing one",
+      "Update the existing database in place, with a short restart but no loss of data",
+      "Add a second database beside the existing one, which keeps running and keeps its data",
       "Destroy the existing database and create a new one, risking downtime and data loss",
-      "Nothing; it only records the change in the state file",
+      "Nothing to the real database; it only records the planned change in the state file",
     ],
     answer: 2,
     explanation:
@@ -800,10 +800,10 @@ export const questions: Question[] = [
     prompt:
       "A teammate deletes the only copy of the Terraform state file. The cloud resources still exist. They then run `terraform apply`. What does Terraform do?",
     options: [
-      "Detects the existing resources automatically and reports no changes",
-      "Deletes all the existing resources to match the empty state",
-      "Rebuilds the state file from the cloud provider's audit logs",
-      "Treats every resource as new and tries to create them all again, causing duplicates or name-conflict errors",
+      "Detects the existing resources by their names, adopts them into a new state file and reports no changes",
+      "Deletes all the existing resources so that the cloud matches the now-empty state file",
+      "Rebuilds the state file from the cloud provider's audit logs and then continues as normal",
+      "Treats every resource as new and tries to create them all again, causing duplicates or name conflicts",
     ],
     answer: 3,
     explanation:
@@ -816,10 +816,10 @@ export const questions: Question[] = [
     prompt:
       "The dev and prod environments should use the same Terraform code, but dev uses small instances and prod uses large ones. What is the cleanest approach?",
     options: [
-      "Declare an input variable for the instance size and supply different values per environment, for example with separate .tfvars files",
-      "Copy the whole codebase into dev and prod folders and edit the sizes by hand",
-      "Hard-code the prod size and resize the dev instances manually in the console",
-      "Comment and uncomment the relevant lines before each apply",
+      "Make the instance size an input variable and give each environment its own .tfvars file",
+      "Copy the whole codebase into separate dev and prod folders and edit the sizes by hand in each copy",
+      "Hard-code the prod size and resize the dev instances by hand in the console after each apply",
+      "Keep both sizes in the code and comment or uncomment the relevant line before each apply",
     ],
     answer: 0,
     explanation:
@@ -832,10 +832,10 @@ export const questions: Question[] = [
     prompt:
       "Three project repositories each contain the same 80 lines of copy-pasted Terraform defining a network, and the copies have started to differ. What is the idiomatic fix?",
     options: [
-      "Merge all three projects into one giant configuration file",
-      "Create the networks manually and stop managing them with Terraform",
-      "Extract the network into a reusable module with input variables and call it from each project",
-      "Add a comment in each copy reminding people to keep them in sync",
+      "Merge all three projects into one giant configuration file with a single shared state",
+      "Create the three networks by hand in the console and stop managing them with Terraform",
+      "Extract the network into a reusable module with input variables, called from each project",
+      "Add a comment at the top of each copy reminding people to apply every edit to all three",
     ],
     answer: 2,
     explanation:
@@ -866,10 +866,10 @@ export const questions: Question[] = [
     prompt:
       "Your team switches from free-text log lines to structured JSON logs that include a request_id field on every line. What is the main practical benefit?",
     options: [
-      "You can filter and correlate every log line belonging to one request, even across services",
-      "Logs no longer need any storage",
-      "The application uses less CPU",
-      "Metrics and dashboards are no longer needed",
+      "You can filter and correlate every log line that belongs to one request, across services",
+      "Log lines take far less storage, because JSON is more compact than free text",
+      "The application uses less CPU, because writing JSON is cheaper than formatting free text",
+      "Metrics and dashboards are no longer needed, because every number can be read from the logs",
     ],
     answer: 0,
     explanation:
@@ -909,10 +909,10 @@ export const questions: Question[] = [
     prompt:
       "An alert pages the on-call engineer whenever CPU exceeds 80% for 10 seconds. It fires about 50 times a day, resolves on its own, and nobody ever takes action. What is the best improvement?",
     options: [
-      "Send the same alert to more people",
-      "Lower the threshold to 70% to get earlier warning",
-      "Page on sustained user-facing symptoms such as error rate or latency, and require the condition to hold for several minutes",
-      "Keep the alert and have on-call acknowledge it faster",
+      "Send the same alert to more people, so that someone is always free to look at each page",
+      "Lower the threshold to 70% for 10 seconds, so that the team gets an earlier warning of trouble",
+      "Page on user-facing symptoms such as error rate or latency that last several minutes",
+      "Keep the alert as it is, and set a target for on-call to acknowledge each page within a minute",
     ],
     answer: 2,
     explanation:
@@ -936,10 +936,10 @@ export const questions: Question[] = [
     prompt:
       "At 14:05 the error rate of a previously stable service jumps from 0.1% to 20%. What is usually the most productive first check?",
     options: [
-      "Rewrite the slowest endpoint",
-      "Add more dashboards",
-      "Wait an hour to see whether it recovers on its own",
-      "Look for a deploy or config change just before 14:05 and roll it back if it correlates",
+      "Profile the slowest endpoint and start rewriting it to bring the error rate down",
+      "Add more dashboards and alerts, so that the next jump in errors is easier to see",
+      "Wait until 15:05 to see whether it recovers on its own, and only then start investigating",
+      "Look for a deploy or config change just before 14:05, and roll it back if the timing fits",
     ],
     answer: 3,
     explanation:
@@ -952,10 +952,10 @@ export const questions: Question[] = [
     prompt:
       "An outage was triggered when an engineer ran a migration against production by mistake. Which post-incident review approach is most effective?",
     options: [
-      "Identify the engineer responsible and issue a formal warning",
-      "A blameless review focused on how the system allowed the mistake, ending with concrete action items",
-      "Skip the review because the issue is already fixed",
-      "Restrict all production access to a single person",
+      "A review that identifies the engineer responsible and ends with a formal warning on their record",
+      "A blameless review of how the system allowed the mistake, ending with concrete action items",
+      "No formal review, because the migration has been reverted and the issue is already fixed",
+      "A review that ends by restricting all production access to a single, most senior person",
     ],
     answer: 1,
     explanation:

@@ -185,14 +185,17 @@ export function Runner({
       ) : null}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <Button variant="ghost" className="h-10 px-4 text-muted-foreground" disabled={pending} onClick={() => send(null)}>
-          Skip — counts as wrong
+        <Button variant="outline" className="h-10 px-4" disabled={pending} onClick={() => send(null)}>
+          I&apos;m not sure
         </Button>
         <Button className="h-10 px-5" disabled={pending || choice === null} onClick={() => send(choice)}>
           {pending ? <Spinner /> : null}
           {pending ? "Saving…" : p.answered + 1 === p.total ? "Submit and start interview" : "Submit answer"}
         </Button>
       </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Not sure? Say so rather than guess. It counts the same as a wrong answer, and a lucky guess only gives you a plan that is too hard.
+      </p>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
         Each answer decides what comes next, so you can&apos;t return to a previous question. Answer as well as you can — the

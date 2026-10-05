@@ -379,7 +379,7 @@ async function finalizeAttempt(tx: Tx, userId: string, role: Role, attemptId: st
   const def = getAssessment(a.assessmentId)!;
   const completedAt = new Date();
   const verified = isVerified(a);
-  const score = scoreAttemptAdaptive(a, def);
+  const score = scoreAttemptAdaptive(a);
 
   const jobs = jobsForRole(role.id);
   const before = await liveReadiness(userId, role, tx);

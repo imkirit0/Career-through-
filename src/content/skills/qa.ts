@@ -90,9 +90,9 @@ export const questions: Question[] = [
     prompt:
       "Your team ran 400 test cases on a release and all of them passed. A stakeholder asks whether the product is now bug-free. What is the most accurate reply?",
     options: [
-      "Yes, a 100% pass rate proves there are no remaining defects",
+      "Yes, a 100% pass rate across 400 test cases proves that no defects remain in the release",
       "No, testing can show that defects are present but cannot prove that none remain",
-      "Yes, provided the test cases were reviewed by a senior tester",
+      "Yes, provided the test cases were reviewed by a senior tester before the run",
       "No, because manual tests are never reliable evidence of quality",
     ],
     answer: 1,
@@ -156,8 +156,8 @@ export const questions: Question[] = [
     options: [
       "Regression testing",
       "Sanity profiling",
-      "Re-testing (confirmation testing)",
-      "Ad hoc testing",
+      "Re-testing (confirmation)",
+      "Ad hoc (unscripted) testing",
     ],
     answer: 2,
     explanation:
@@ -171,9 +171,9 @@ export const questions: Question[] = [
       "A fix was made to the discount calculation in checkout. You have limited time before release. Which regression approach is most sensible?",
     options: [
       "Re-run tests for checkout and the areas that depend on it, such as order totals, invoices and refunds",
-      "Re-run only the single test case that originally failed",
-      "Skip regression because the fix was only a few lines of code",
-      "Re-run tests only for modules that have never had a defect",
+      "Re-run only the single test case that originally failed, and treat its pass as proof nothing else broke",
+      "Skip regression because the fix was only a few lines of code and the developer has checked it",
+      "Re-run tests only for the modules that have never had a defect, since they have been checked the least",
     ],
     answer: 0,
     explanation:
@@ -186,10 +186,10 @@ export const questions: Question[] = [
     prompt:
       "You are given 60 minutes to explore a new file-upload feature with no written test cases. Which approach reflects good exploratory testing practice?",
     options: [
-      "Click around randomly and report whatever breaks, without keeping notes",
-      "Refuse to start until detailed test cases have been written and approved",
-      "Only repeat the happy-path demo the developer showed you",
-      "Set a charter for the session, test within the time box, and note what you tried, found and still want to explore",
+      "Click around randomly and report whatever breaks, without keeping notes of what you covered",
+      "Refuse to start until detailed test cases have been written, reviewed and approved by the test lead",
+      "Repeat only the happy-path demo the developer showed you, since that is the behaviour that matters",
+      "Set a charter, test within the time box, and note what you tried, found and still want to explore",
     ],
     answer: 3,
     explanation:
@@ -202,8 +202,8 @@ export const questions: Question[] = [
     prompt:
       "A web form works perfectly on Chrome on your laptop, but a user reports the Submit button is hidden off-screen on Safari on an iPhone. Which type of testing would have caught this?",
     options: [
-      "Load testing",
-      "Compatibility (cross-browser and cross-device) testing",
+      "Load and performance testing",
+      "Compatibility testing",
       "Unit testing",
       "Security testing",
     ],
@@ -286,9 +286,9 @@ export const questions: Question[] = [
       "In a decision table for a discount rule, whenever 'Account is blocked' is true the action is always 'Reject order', regardless of the other two conditions. What is the correct way to simplify the table?",
     options: [
       "Merge those rules into one and mark the other conditions as 'don't care'",
-      "Delete the 'Account is blocked' condition from the table",
-      "Keep only the rules where all conditions are true",
-      "Replace the decision table with boundary value analysis",
+      "Delete the 'Account is blocked' condition from the table, since its outcome never changes",
+      "Keep only the rules where all three conditions are true and drop the rest",
+      "Replace the decision table with boundary value analysis of the conditions",
     ],
     answer: 0,
     explanation:
@@ -300,10 +300,10 @@ export const questions: Question[] = [
     topicId: "test-case-design-writing-cases",
     prompt: "Which expected result is written well enough for another tester to judge pass or fail?",
     options: [
-      "Login should work properly",
-      "The system behaves as expected",
+      "Login should work properly and the user should be able to continue without problems",
+      "The system behaves as expected and responds in a reasonable amount of time",
       "The user is redirected to /dashboard and the header shows 'Welcome, Asha'",
-      "The page looks fine and there are no issues",
+      "The dashboard page looks fine, loads quickly and there are no visible issues",
     ],
     answer: 2,
     explanation:
@@ -316,9 +316,9 @@ export const questions: Question[] = [
     prompt:
       "You wrote a test case 'Verify a user can cancel an order'. A colleague runs it and is blocked at step 1 because no order exists in their account. What was missing from the test case?",
     options: [
-      "A severity rating",
-      "A defect ID",
-      "A longer title",
+      "A severity and priority rating",
+      "A linked defect ID",
+      "A longer, more detailed title",
       "Preconditions and test data",
     ],
     answer: 3,
@@ -334,10 +334,10 @@ export const questions: Question[] = [
     prompt:
       "A defect caused by an ambiguous requirement is discovered only during system testing in a waterfall project. Why is it expensive to fix at this point?",
     options: [
-      "Testers charge more for defects found late",
+      "Testers and test tools are billed at a higher rate for defects found late",
       "The design, code and tests built on that requirement all have to be reworked",
-      "Waterfall projects do not allow any defects to be fixed after coding",
-      "System testing tools are more costly than unit testing tools",
+      "Waterfall projects do not allow any defects to be fixed once coding has finished",
+      "System testing tools are more costly to license than unit testing tools",
     ],
     answer: 1,
     explanation:
@@ -380,10 +380,10 @@ export const questions: Question[] = [
     prompt:
       "Testing for a release has finished. Your lead asks you to help with the test closure phase. Which task belongs to it?",
     options: [
-      "Writing new test cases for the next feature",
-      "Setting up the QA database and test accounts",
+      "Writing new test cases for the next feature in the backlog",
+      "Setting up the QA database and creating test accounts for the testers",
       "Preparing the test summary report and recording lessons learned",
-      "Estimating the effort needed for test execution",
+      "Estimating the effort and schedule needed for test execution",
     ],
     answer: 2,
     explanation:
@@ -396,10 +396,10 @@ export const questions: Question[] = [
     prompt:
       "In a two-week Scrum sprint, when should a tester ideally start working on a user story?",
     options: [
-      "After the developers have finished coding all stories in the sprint",
-      "Only during the last two days, which are reserved for testing",
-      "After the sprint review, once the product owner has seen the demo",
-      "From backlog refinement and sprint planning, by clarifying acceptance criteria and preparing tests while development is in progress",
+      "After the developers have finished coding all stories in the sprint, so that nothing changes during testing",
+      "Only during the last two days of the sprint, which are reserved for testing the finished stories",
+      "After the sprint review, once the product owner has seen the demo and accepted the story",
+      "From backlog refinement onwards, clarifying acceptance criteria and preparing tests during development",
     ],
     answer: 3,
     explanation:
@@ -429,9 +429,9 @@ export const questions: Question[] = [
       "Midway through a project, requirement REQ-12 changes. Which artifact lets you quickly identify the test cases that need updating?",
     options: [
       "Requirements traceability matrix (RTM)",
-      "Test summary report",
-      "Defect density chart",
-      "Test environment checklist",
+      "Test summary report for the previous cycle",
+      "Defect density chart for each module",
+      "Test environment readiness checklist",
     ],
     answer: 0,
     explanation:
@@ -443,10 +443,10 @@ export const questions: Question[] = [
     topicId: "sdlc-stlc-planning-traceability",
     prompt: "Which of the following is an example of an exit criterion for system testing?",
     options: [
-      "The test environment is set up and accessible",
-      "The build has passed the smoke test",
-      "All planned test cases are executed and no critical or high severity defects remain open",
-      "The test plan has been reviewed and approved",
+      "The test environment is set up, accessible and loaded with the test data",
+      "The build has passed the smoke test and been accepted by the test team",
+      "All planned test cases are executed and no critical defects remain open",
+      "The test plan has been reviewed and approved by the project stakeholders",
     ],
     answer: 2,
     explanation:
@@ -494,10 +494,10 @@ export const questions: Question[] = [
     prompt:
       "You send a request with a missing required field. The API responds with 500 Internal Server Error and a stack trace. How should you treat this?",
     options: [
-      "Pass, because the invalid request was rejected",
-      "Pass, because 5xx is the standard range for client mistakes",
-      "Report a defect: bad client input should return a 4xx error with a clear message, and the server should not crash or leak a stack trace",
-      "Ignore it, because negative tests are outside the scope of API testing",
+      "Pass, because the invalid request was rejected and no record was created on the server",
+      "Pass, because 5xx is the standard range for client mistakes such as a missing field",
+      "Report a defect, because bad client input should return a 4xx error, not a stack trace",
+      "Ignore it, because negative tests with invalid input are outside the scope of API testing",
     ],
     answer: 2,
     explanation:
@@ -522,9 +522,9 @@ export const questions: Question[] = [
       "An API uses bearer tokens. In your API client, how is the token normally sent with each request?",
     options: [
       "In the request header 'Authorization: Bearer <token>'",
-      "As plain text at the start of the request body",
-      "In the 'Content-Type' header",
-      "In the 'Accept' header",
+      "In the request body as the plain-text line 'Bearer <token>'",
+      "In the request header 'Content-Type: Bearer <token>'",
+      "In the request header 'Accept: Bearer <token>'",
     ],
     answer: 0,
     explanation:
@@ -537,10 +537,10 @@ export const questions: Question[] = [
     prompt:
       "'GET /products/10' returns 200 OK. Which additional check adds the most value to this test?",
     options: [
-      "Confirming the request was sent from your own machine",
-      "Asserting the body matches the expected schema and values, for example id equals 10 and price is a non-negative number",
-      "Re-sending the same request ten times and confirming it is still 200",
-      "Checking that the response contains at least one character",
+      "Confirming the request was sent from your own machine and not from a colleague's",
+      "Asserting the body matches the expected schema and values, such as id equal to 10",
+      "Re-sending the same request ten times and confirming the status is still 200 each time",
+      "Checking that the response body is not empty and contains at least one character",
     ],
     answer: 1,
     explanation:
@@ -553,10 +553,10 @@ export const questions: Question[] = [
     prompt:
       "In a Postman-style collection you create an order with POST, then need its id for the following GET and DELETE requests. What is the best practice?",
     options: [
-      "Copy the id by hand into each request before every run",
-      "Hard-code the id that was returned the first time you ran it",
-      "Extract the id from the POST response in a script, store it in a variable and reference the variable in later requests",
-      "Skip the GET and DELETE requests because they depend on other requests",
+      "Copy the id by hand from the POST response into each later request before every run",
+      "Hard-code the id that was returned the first time you ran it, so that the later requests never change",
+      "Save the id from the POST response in a variable and use that variable in the later requests",
+      "Skip the GET and DELETE requests, because requests that depend on other requests cannot be automated",
     ],
     answer: 2,
     explanation:
@@ -570,9 +570,9 @@ export const questions: Question[] = [
     topicId: "bug-reporting-report-anatomy",
     prompt: "Which bug title is the most useful to a developer scanning the defect list?",
     options: [
-      "Checkout is broken!!",
-      "Bug in payment page, please fix urgently",
-      "Coupon not working",
+      "URGENT!!! Checkout is completely broken, nothing works, please look at it today",
+      "Bug in the payment page found during testing, please fix urgently",
+      "Coupon is not working properly for some users on the website",
       "Checkout: applying coupon SAVE10 twice makes the order total negative",
     ],
     answer: 3,
@@ -586,10 +586,10 @@ export const questions: Question[] = [
     prompt:
       "A developer returns your bug with the comment 'Cannot reproduce'. Your report contains a title and one screenshot. What should you add first to make it actionable?",
     options: [
-      "A higher priority so the developer takes it more seriously",
-      "Numbered steps to reproduce with the test data used, environment and build details, and expected versus actual results",
-      "A note that the bug definitely exists because you saw it",
-      "A suggestion for which line of code should be changed",
+      "A higher priority and severity, so that the developer takes the report more seriously this time",
+      "Numbered steps to reproduce with test data, the environment, and expected versus actual results",
+      "A note that the bug definitely exists because you and a colleague both saw it happen",
+      "A suggestion for which file and line of code should be changed to fix the problem",
     ],
     answer: 1,
     explanation:
@@ -634,7 +634,7 @@ export const questions: Question[] = [
     prompt:
       "A defect is marked Fixed and deployed to QA. You re-test and the same failure still occurs. What should you do with the defect?",
     options: [
-      "Close it, because the developer has already marked it as fixed",
+      "Close it, because the developer has already marked it as fixed and deployed it",
       "Log a brand-new defect and leave the old one as Fixed",
       "Change its status to Deferred",
       "Reopen it with the build number and fresh evidence of the failure",
@@ -677,10 +677,10 @@ export const questions: Question[] = [
     prompt:
       "A page fails to save only sometimes. Before reporting, which action best helps isolate the defect?",
     options: [
-      "Report it as 'random failure' and let the developer investigate",
-      "Wait to see whether users complain in production",
-      "Vary one factor at a time, such as browser, account, input data and network, and record how often it fails under each condition",
-      "Mark it as not reproducible because it does not happen every time",
+      "Report it as a 'random failure' with no further detail and let the developer investigate",
+      "Wait to see whether users complain in production before spending time on a report",
+      "Vary one factor at a time, such as browser or input data, and record how often it fails",
+      "Mark it as not reproducible and close it, because it does not happen on every attempt",
     ],
     answer: 2,
     explanation:
@@ -710,10 +710,10 @@ export const questions: Question[] = [
     prompt:
       "According to the test automation pyramid, how should a team distribute its automated tests?",
     options: [
-      "Mostly end-to-end UI tests, with a few unit tests",
-      "Equal numbers of tests at every level",
-      "Only UI tests, because they are closest to what the user sees",
-      "Many fast unit tests at the base, fewer API or integration tests in the middle, and a small number of end-to-end UI tests at the top",
+      "Mostly end-to-end UI tests, a few API tests in the middle, and only a handful of unit tests at the base",
+      "Equal numbers of unit tests, API or integration tests, and end-to-end UI tests",
+      "Only end-to-end UI tests, because they are closest to what the user sees and cover everything",
+      "Many fast unit tests at the base, fewer API or integration tests, and a small number of UI tests at the top",
     ],
     answer: 3,
     explanation:
@@ -741,10 +741,10 @@ export const questions: Question[] = [
     prompt:
       "Your test breaks every time a developer adds a wrapper div to the page, even though the target button itself has not changed. What is the most likely cause?",
     options: [
-      "The browser driver is out of date",
-      "The assertion library has a defect",
-      "The locator depends on the page structure, such as an absolute XPath or an index-based path",
-      "The test is running in headless mode",
+      "The browser driver is out of date and no longer matches the browser version",
+      "The assertion library has a defect that appears when new elements are added",
+      "The locator depends on the page structure, such as an absolute XPath",
+      "The test is running in headless mode, where wrapper elements are not rendered",
     ],
     answer: 2,
     explanation:
@@ -757,8 +757,8 @@ export const questions: Question[] = [
     prompt:
       "A test clicks Search and immediately reads the results list. It passes on your laptop but fails intermittently on the slower CI server. What is the best fix?",
     options: [
-      "Add a fixed 10-second sleep after every click in the suite",
-      "Configure the CI job to re-run the test until it passes",
+      "Add a fixed 10-second sleep after every click in the whole test suite",
+      "Configure the CI job to keep re-running the test until it eventually passes",
       "Delete the test because flaky tests cannot be fixed",
       "Wait explicitly for the results list to become visible before reading it",
     ],
@@ -773,10 +773,10 @@ export const questions: Question[] = [
     prompt:
       "What is the difference between an implicit wait and an explicit wait in Selenium-style tools?",
     options: [
-      "An implicit wait always pauses for its full duration, while an explicit wait never pauses",
-      "An implicit wait is a global timeout applied to every element lookup, while an explicit wait polls for a specific condition on a specific element",
-      "An implicit wait works only for alerts, while an explicit wait works only for page loads",
-      "There is no difference; they are two names for the same setting",
+      "An implicit wait always pauses the test for its full duration, while an explicit wait never pauses the test at all",
+      "An implicit wait is a global timeout for every element lookup, while an explicit wait polls for one specific condition",
+      "An implicit wait works only for browser alerts, while an explicit wait works only for full page loads",
+      "There is no real difference; implicit and explicit are two names for the same timeout setting in the driver",
     ],
     answer: 1,
     explanation:
@@ -805,10 +805,10 @@ export const questions: Question[] = [
     prompt:
       "The same login test needs to run for 20 different username and password combinations. Which approach is best?",
     options: [
-      "Copy the test script 20 times and edit the values in each copy",
-      "Run the test manually for the remaining 19 combinations",
-      "Keep the combinations in an external data source and run one parameterised test over them (data-driven testing)",
-      "Put all 20 combinations into one long test with 20 hard-coded blocks of steps",
+      "Copy the test script 20 times and edit the username and password values in each copy",
+      "Automate one combination and run the test manually for the remaining 19 combinations",
+      "Keep the combinations in an external data file and run one parameterised test over them",
+      "Put all 20 combinations into one long test made of 20 hard-coded blocks of repeated steps",
     ],
     answer: 2,
     explanation:

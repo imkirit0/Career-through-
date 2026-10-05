@@ -12,7 +12,7 @@ describe.skipIf(!url)("data layer against Postgres", () => {
     const { getRole } = await import("@/content/roles");
     const { QUESTIONS, getAssessment } = await import("@/content/assessments");
     const { evidenceFromAdaptive } = await import("./attempt");
-    const { scoreAdaptive, startDifficulty } = await import("./adaptive");
+    const { scoreAdaptive } = await import("./adaptive");
     const { selectQuestions } = await import("./assessment");
     const { getCandidateState, recordSnapshot } = await import("./data");
     const { CONTENT_VERSION } = await import("@/content/version");
@@ -30,20 +30,16 @@ describe.skipIf(!url)("data layer against Postgres", () => {
     // A perfect baseline, scored by the real engine.
     const def = getAssessment(`baseline:${role.id}`)!;
     const issued = selectQuestions(def, QUESTIONS, "seed");
-    const score = scoreAdaptive(
-      issued.map((q) => ({ question: q, choice: q.answer })),
-      startDifficulty("baseline"),
-      Object.fromEntries(def.skillIds.map((id) => [id, def.questionsPerSkill])),
-      "seed",
-    );
+    const score = scoreAdaptive(issued.map((q) => ({ question: q, choice: q.answer })));
     const rows = evidenceFromAdaptive(def, score, { id: randomUUID(), verified: true, completedAt: new Date() });
     const second = await db.transaction(async (tx) => {
       await tx.insert(evidence).values(rows.map((r) => ({ ...r, userId, contentVersion: CONTENT_VERSION })));
       return recordSnapshot(tx, userId, role, "baseline:test");
     });
     expect(second.before?.score).toBe(first.after.score);
-    // Knowledge alone is capped per skill: a perfect paper holds every skill at 84, not above.
-    expect(second.after.perSkill.every((p) => p.level === 84 && p.cappedFrom === 100)).toBe(true);
+    // Knowledge alone is capped per skill: even a perfect paper leaves no skill above 84.
+    expect(Math.max(...second.after.perSkill.map((p) => p.level))).toBe(84);
+    expect(second.after.perSkill.find((p) => p.skillId === "test-case-design")).toMatchObject({ level: 84, cappedFrom: 85 });
     expect(second.after.score).toBeGreaterThan(50);
 
     const [p] = await db.select().from(profile).where(eq(profile.userId, userId));

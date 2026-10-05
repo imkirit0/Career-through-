@@ -148,9 +148,9 @@ export const questions: Question[] = [
     prompt:
       "average([2, 4, 6]) returns NaN instead of 4. What is the bug?\n\nfunction average(nums) {\n  let sum = 0;\n  for (let i = 0; i <= nums.length; i++) sum += nums[i];\n  return sum / nums.length;\n}",
     options: [
-      "sum should be initialised to 1 instead of 0",
-      "Division always returns NaN for integers in JavaScript",
-      "The loop should start at i = 1",
+      "sum should be initialised to 1 instead of 0; adding a number to 0 produces NaN",
+      "The division should be wrapped in parseInt; dividing two integers produces NaN",
+      "The loop should start at i = 1; the item at index 0 of an array is undefined",
       "The loop condition should be i < nums.length; the last iteration adds undefined",
     ],
     answer: 3,
@@ -214,9 +214,9 @@ export const questions: Question[] = [
     prompt:
       "POST /articles successfully creates a new article with id 91. Which response is most appropriate?",
     options: [
-      "200 OK with an empty body",
-      "204 No Content",
-      "202 Accepted",
+      "200 OK with an empty body and no Location header",
+      "204 No Content with a Location: /articles header",
+      "202 Accepted with a Location: /articles/91 header",
       "201 Created with a Location: /articles/91 header",
     ],
     answer: 3,
@@ -241,10 +241,10 @@ export const questions: Question[] = [
     prompt:
       "Clients page through a busy feed using GET /posts?page=2&limit=20. They report seeing the same posts again on the next page whenever new posts are published. What is the best fix?",
     options: [
-      "Increase the limit to 100 so fewer pages are needed",
-      "Return all posts in a single response",
+      "Raise the limit to 100, e.g. GET /posts?page=2&limit=100, so there are fewer pages",
+      "Return every post in one response, e.g. GET /posts with no page or limit",
       "Switch to cursor-based pagination, e.g. GET /posts?after=<lastPostId>&limit=20",
-      "Cache page 2 on the server for one hour",
+      "Cache page 2 on the server for an hour, so GET /posts?page=2 responds faster",
     ],
     answer: 2,
     explanation:
@@ -273,9 +273,9 @@ export const questions: Question[] = [
     prompt:
       "A client calls POST /payments, the network times out, and the client retries. Some customers get charged twice. Which API design change best prevents this?",
     options: [
-      "Tell clients never to retry failed requests",
-      "Change the endpoint to GET /payments so it becomes safe",
-      "Return 500 on every timeout so the client knows it failed",
+      "Tell clients never to retry, and document that a timeout always means the payment failed",
+      "Change the endpoint to GET /payments, because GET requests are safe to send twice",
+      "Return 500 on every timeout, so the client knows the payment failed and can resend it",
       "Require a unique Idempotency-Key header and return the original result for repeated keys",
     ],
     answer: 3,
@@ -289,10 +289,10 @@ export const questions: Question[] = [
     prompt:
       "Your public API returns { \"name\": \"Asha Rao\" }. The team wants to replace it with separate firstName and lastName fields. Many third-party apps depend on the current response. What is the best approach?",
     options: [
-      "Remove name immediately and announce it in the changelog",
-      "Release the change under a new version (e.g. /v2) while keeping /v1 working through a deprecation period",
-      "Change the field on alternate days so clients notice gradually",
-      "Keep the same URL but return different fields depending on server load",
+      "Remove name immediately and announce it in the changelog, since the two new fields hold the same data",
+      "Release the change under a new version (e.g. /v2) and keep /v1 working through a deprecation period",
+      "Keep the same URL and swap the fields at once, since well-built clients ignore fields they do not know",
+      "Keep the same URL but switch the fields for a tenth of requests at first, then for more each week",
     ],
     answer: 1,
     explanation:
@@ -307,10 +307,10 @@ export const questions: Question[] = [
     prompt:
       "A logged-in customer changes the URL from /invoices/1001 to /invoices/1002 and sees another customer's invoice. Which control failed?",
     options: [
-      "Authentication: the system did not verify who the user is",
+      "Authentication: the server did not verify who the user is before showing the invoice",
       "Authorization: the server did not check that this user may access that invoice",
-      "Encryption: the invoice was not sent over HTTPS",
-      "Hashing: the invoice id was not hashed",
+      "Encryption: the invoice was not sent over HTTPS, so anyone could read it",
+      "Hashing: the invoice id was stored in plain text instead of as a hash",
     ],
     answer: 1,
     explanation:
@@ -339,9 +339,9 @@ export const questions: Question[] = [
     prompt: "You are building a signup flow. How should user passwords be stored in the database?",
     options: [
       "Hashed with a slow, salted password-hashing algorithm such as bcrypt or Argon2",
-      "Encrypted with AES using a key stored in the same database",
-      "Hashed once with plain MD5 or SHA-1 for speed",
-      "Base64-encoded so they are not human readable",
+      "Encrypted with AES, with the key kept in the same database so logins can decrypt them",
+      "Hashed once with a fast, unsalted algorithm such as MD5 or SHA-1 to keep logins quick",
+      "Base64-encoded with a per-user prefix so they are not human readable",
     ],
     answer: 0,
     explanation:
@@ -354,10 +354,10 @@ export const questions: Question[] = [
     prompt:
       "Two users both choose the password 'Summer2024!'. Why should the application add a unique random salt for each user before hashing?",
     options: [
-      "So the password can be decrypted later if the user forgets it",
-      "So the hash is shorter and uses less storage",
-      "So identical passwords produce different hashes, defeating precomputed (rainbow table) attacks",
-      "So the login request is faster",
+      "So the password can be decrypted using the salt later if the user forgets it",
+      "So the stored hash is shorter and the users table takes up less database storage",
+      "So identical passwords get different hashes, defeating precomputed (rainbow table) attacks",
+      "So the login check is faster, because the server compares the salts before hashing anything",
     ],
     answer: 2,
     explanation:
@@ -370,10 +370,10 @@ export const questions: Question[] = [
     prompt:
       "A teammate proposes putting the user's national ID number in the JWT payload 'because the token is signed'. What is the problem with this?",
     options: [
-      "Signed JWTs cannot contain numbers",
-      "The signature makes the token too long for an HTTP header",
+      "JWT claims must be strings, so a numeric ID would make the signature invalid",
+      "The signature covers only the header, so the ID could be changed without detection",
       "The payload is only Base64URL-encoded, so anyone holding the token can read it",
-      "JWT payloads are deleted by the browser after one request",
+      "The payload is dropped by the browser after one request, so the ID would be lost",
     ],
     answer: 2,
     explanation:
@@ -402,9 +402,9 @@ export const questions: Question[] = [
     prompt:
       "A login handler builds its query like this:\n\nconst sql = \"SELECT * FROM users WHERE email = '\" + email + \"'\";\n\nWhat is the correct fix?",
     options: [
-      "Reject any email longer than 30 characters",
-      "Hide database error messages from the user",
-      "Convert the email to lowercase before concatenating",
+      "Reject any email longer than 30 characters so that an injected statement cannot fit",
+      "Hide database error messages from the user so that an attacker cannot see the query",
+      "Convert the email to lowercase before concatenating so that SQL keywords stop working",
       "Use a parameterized query (prepared statement) so the email is passed as data, not SQL",
     ],
     answer: 3,
@@ -436,10 +436,10 @@ export const questions: Question[] = [
     prompt:
       "A unit test for isWeekendDiscountActive() passes on Saturdays but fails on weekdays because the function reads the current system date. What is the best fix?",
     options: [
-      "Only run the test suite on weekends",
-      "Add a retry so the test runs until it passes",
+      "Only run the test suite on weekends, when the function is expected to return true",
+      "Add a retry around the test so that it runs again each day until it finally passes",
       "Pass the date (or a clock) into the function so the test can supply fixed dates",
-      "Delete the test because date logic cannot be tested",
+      "Skip the test on weekdays with a condition, since date logic cannot be tested reliably",
     ],
     answer: 2,
     explanation:
@@ -474,10 +474,10 @@ export const questions: Question[] = [
     prompt:
       "A production bug shows parseDate(\"\") throws an exception instead of returning null. What is the best way to handle the fix?",
     options: [
-      "Fix the code and rely on manual checking before each release",
-      "Wrap every call to parseDate in try/catch across the codebase",
-      "Fix the code; the existing tests already pass so nothing else is needed",
-      "First write a test that reproduces the failure, then fix the code and keep the test as a regression test",
+      "Fix the code and rely on manual checking of empty input before each release",
+      "Wrap every call to parseDate in try/catch across the codebase and return null from each",
+      "Fix the code; the existing tests already pass, so no new test is needed for this input",
+      "First write a test that reproduces the failure, then fix the code and keep that test",
     ],
     answer: 3,
     explanation:
@@ -490,10 +490,10 @@ export const questions: Question[] = [
     prompt:
       "registerUser() saves a user and then sends a welcome email through a third-party email API. How should a unit test handle the email part?",
     options: [
-      "Send a real email to a personal inbox and check it manually",
-      "Comment out the email call while the tests run",
+      "Send a real email to a personal inbox and check by hand that the right message has arrived",
+      "Comment out the email call while the tests run and restore it before every release",
       "Replace the email client with a mock and assert it was called with the expected recipient",
-      "Skip testing registerUser() because it has side effects",
+      "Skip testing registerUser() because functions with side effects cannot be unit tested",
     ],
     answer: 2,
     explanation:
@@ -522,9 +522,9 @@ export const questions: Question[] = [
     prompt:
       "All unit tests for OrderRepository pass with a mocked database, yet the feature fails in staging. Which kind of defect would an integration test against a real test database most likely have caught?",
     options: [
-      "A typo in a code comment",
-      "An incorrect rounding rule inside a pure calculation function",
-      "A confusing variable name",
+      "A misspelt word in a code comment above the repository's save method",
+      "An incorrect rounding rule inside a pure function that calculates the order total",
+      "A confusing variable name that makes the repository code harder to read",
       "A SQL query that references a column that does not exist in the schema",
     ],
     answer: 3,
@@ -538,10 +538,10 @@ export const questions: Question[] = [
     prompt:
       "Your team is setting up a CI pipeline and deciding how to balance test types. Which mix follows the commonly recommended test pyramid?",
     options: [
-      "Mostly end-to-end UI tests, with a few unit tests",
-      "Many fast unit tests, fewer integration tests, and a small number of end-to-end tests",
-      "Equal numbers of unit, integration, and end-to-end tests",
-      "Only manual tests, run before each release",
+      "Many end-to-end tests, fewer integration tests, and a small number of unit tests",
+      "Many unit tests, fewer integration tests, and a small number of end-to-end tests",
+      "Equal numbers of unit tests, integration tests, and end-to-end tests at every stage",
+      "Many manual tests before each release, a few end-to-end tests, and no unit tests",
     ],
     answer: 1,
     explanation:
@@ -589,9 +589,9 @@ export const questions: Question[] = [
       "A product-details endpoint receives 10,000 reads per second, but product data changes about once a day. The database is struggling. What is the most effective first improvement?",
     options: [
       "Cache product responses in an in-memory store such as Redis with a sensible TTL",
-      "Put incoming read requests onto a message queue",
-      "Add a database index on every column",
-      "Ask clients to call the endpoint less often",
+      "Put incoming read requests onto a message queue for workers to answer in turn",
+      "Add a database index on every column of the products table to speed up each lookup",
+      "Ask every client team to call the endpoint less often by showing fewer product pages",
     ],
     answer: 0,
     explanation:
@@ -604,10 +604,10 @@ export const questions: Question[] = [
     prompt:
       "After users update their display name, they keep seeing the old name for up to 10 minutes. Profiles are cached with a 10-minute TTL. What is the best fix?",
     options: [
-      "Increase the TTL to one hour",
-      "Restart the cache server every night",
+      "Increase the TTL to one hour so the cache is refreshed less often",
+      "Restart the cache server every night so that all the old entries are cleared out",
       "Delete or update the cached profile entry whenever the profile is written",
-      "Remove the database and serve everything from the cache",
+      "Remove the database and serve every profile from the cache as the only copy",
     ],
     answer: 2,
     explanation:
@@ -621,9 +621,9 @@ export const questions: Question[] = [
       "Your stateless API runs on one server that sits at 95% CPU during peak traffic. Which option is an example of horizontal scaling?",
     options: [
       "Upgrading the server from 4 to 32 CPU cores",
-      "Adding more RAM to the existing server",
+      "Adding more RAM to the existing server, from 16 GB to 64 GB",
       "Running several identical servers behind a load balancer",
-      "Moving the server to a faster SSD",
+      "Moving the existing server to a faster SSD",
     ],
     answer: 2,
     explanation:
@@ -637,9 +637,9 @@ export const questions: Question[] = [
       "After moving from one server to three servers behind a round-robin load balancer, users are randomly logged out. Sessions are stored in each server's memory. What is the best fix?",
     options: [
       "Store sessions in a shared store such as Redis so any server can serve any user",
-      "Go back to a single, larger server permanently",
-      "Ask users to log in again whenever it happens",
-      "Shorten the session timeout",
+      "Go back to a single, larger server permanently and give up the extra capacity",
+      "Ask users to log in again whenever it happens and explain the cause on the login page",
+      "Shorten the session timeout so that each server forgets its sessions more quickly",
     ],
     answer: 0,
     explanation:
@@ -652,10 +652,10 @@ export const questions: Question[] = [
     prompt:
       "POST /signup takes 8 seconds because it creates the account, generates a PDF welcome pack, and sends an email before responding. What is the best redesign?",
     options: [
-      "Increase the HTTP timeout on the client to 30 seconds",
-      "Show a longer loading animation",
-      "Run the PDF and email steps before creating the account",
-      "Create the account, enqueue the PDF and email work for a background worker, and respond immediately",
+      "Increase the HTTP timeout on the client to 30 seconds so that the slow request never fails",
+      "Show a longer loading animation so that the 8-second wait feels shorter to the new user",
+      "Run the PDF and email steps before creating the account, then respond once all three are done",
+      "Create the account, enqueue the PDF and email for a background worker, and respond immediately",
     ],
     answer: 3,
     explanation:
@@ -668,10 +668,10 @@ export const questions: Question[] = [
     prompt:
       "Your message queue guarantees at-least-once delivery, so a worker may occasionally receive the same 'send invoice' message twice. How should the worker be designed?",
     options: [
-      "Assume duplicates never happen because the queue is reliable",
+      "Assume duplicates never happen, because a reliable queue delivers each message exactly once",
       "Make the handler idempotent, e.g. record processed message ids and skip ones already handled",
-      "Process every message twice on purpose to stay consistent",
-      "Turn off acknowledgements so messages are never redelivered",
+      "Process every message twice on purpose, so every customer gets the same number of invoices",
+      "Turn off acknowledgements so nothing is redelivered, even if the worker crashes mid-send",
     ],
     answer: 1,
     explanation:

@@ -58,6 +58,9 @@ export type EvidenceItem = {
     /** Highest difficulty band answered correctly, from adaptive scoring. */
     peakCorrect?: number;
     scoringVersion?: string;
+    /** The range an assessed level very likely lies in (adaptive-v2 onwards). */
+    low?: number;
+    high?: number;
   } | null;
   createdAt: Date;
   expiresAt: Date | null;
@@ -99,6 +102,8 @@ export type SkillReadiness = {
   reassessRecommended: boolean;
   /** Scored above the knowledge-only cap but not yet demonstrated: the raw score. */
   cappedFrom: number | null;
+  /** The range the level very likely lies in, and how many questions it rests on. Null without a ranged assessment. */
+  range: { low: number; high: number; questions: number } | null;
   lastVerifiedAt: string | null;
   /** Ids of evidence rows that produced this level, newest first. */
   evidenceIds: string[];
@@ -229,6 +234,11 @@ export function computeReadiness(
         assessment && now.getTime() - assessment.createdAt.getTime() > REASSESS_AFTER_DAYS * 86_400_000,
       ),
       cappedFrom,
+      // A level held at the cap cannot be said to lie above it.
+      range:
+        assessment?.detail?.low != null && assessment.detail.high != null
+          ? { low: Math.min(assessment.detail.low, level), high: Math.min(Math.max(assessment.detail.high, level), cappedFrom !== null ? level : 100), questions: assessment.detail.total ?? 0 }
+          : null,
       lastVerifiedAt: assessment ? assessment.createdAt.toISOString() : null,
       evidenceIds: used.map((e) => e.id),
       explanation,

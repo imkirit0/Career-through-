@@ -96,7 +96,7 @@ export function matchJob(job: Job, role: Role, ctx: MatchContext): JobMatch {
     blockers.push({
       kind: "project",
       message: "This role asks for project evidence. Submit your role project.",
-      href: "/plan#project",
+      href: "/plan?view=project",
     });
   }
   if (!readinessOk) {

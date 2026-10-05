@@ -101,8 +101,8 @@ export const questions: Question[] = [
     prompt:
       "A screen-reader user reports that this field is announced only as 'edit text':\n\n<span>Email</span>\n<input type='email' id='email'>\n\nWhich change fixes it?",
     options: [
-      "Add name='email' to the input",
-      "Add tabindex='0' to the input",
+      "Add name='email' to the input so it has a name to announce",
+      "Add tabindex='0' to the input so the span is read with it",
       "Make the span bold so it is clearly the field title",
       "Replace the span with <label for='email'>Email</label>",
     ],
@@ -127,7 +127,7 @@ export const questions: Question[] = [
     topicId: "html-css-box-model-cascade",
     prompt:
       "Given this markup and CSS, what colour is the paragraph text?\n\n<div id='main'><p class='text highlight'>Hi</p></div>\n\n.text.highlight { color: blue; }\n#main p { color: red; }\np.text { color: green; }",
-    options: ["Blue, because it uses two classes", "Green, because it is declared last", "Red, because an ID selector outweighs any number of classes", "Black, because the rules conflict and cancel out"],
+    options: ["Blue, because two classes outweigh one ID plus an element", "Green, because the rule declared last overrides the earlier ones", "Red, because an ID selector outweighs any number of classes", "Black, because the rules conflict and cancel out"],
     answer: 2,
     explanation:
       "Specificity is compared ID-first: '#main p' (1,0,1) beats '.text.highlight' (0,2,0) and 'p.text' (0,1,1). Source order only matters when specificity ties.",
@@ -177,8 +177,8 @@ export const questions: Question[] = [
     prompt:
       "Your media queries work when you resize a desktop browser, but on a real phone the page renders as a tiny zoomed-out desktop layout. What is most likely missing?",
     options: [
-      "A CSS reset stylesheet",
-      "max-width: 100% on the body element",
+      "A CSS reset stylesheet loaded first, to clear the phone browser's default zoom level",
+      "max-width: 100% on the body element, so the layout cannot be wider than the screen",
       "<meta name='viewport' content='width=device-width, initial-scale=1'> in the head",
       "The !important flag on the rules inside the media queries",
     ],
@@ -309,7 +309,7 @@ export const questions: Question[] = [
       "A parent component owns a quantity state value and renders <QuantityPicker quantity={quantity} />. The picker's '+' button needs to increase the quantity. What is the correct approach?",
     options: [
       "Pass a callback such as onIncrease from the parent and call it in the child's click handler",
-      "Reassign props.quantity inside the child's click handler",
+      "Reassign props.quantity inside the child's click handler, which updates the parent's state as well",
       "Copy the prop into a global variable that both components read",
       "Call the parent component function directly from the child to re-render it",
     ],
@@ -352,9 +352,9 @@ export const questions: Question[] = [
       "The network tab shows this component requesting /api/courses endlessly. Which fix is correct?\n\nuseEffect(() => {\n  fetch('/api/courses')\n    .then(r => r.json())\n    .then(setCourses);\n});",
     options: [
       "Pass an empty dependency array as the second argument: useEffect(..., [])",
-      "Move the fetch call out of useEffect into the component body",
-      "Replace useEffect with useMemo",
-      "Pass [courses] as the dependency array",
+      "Move the fetch call out of useEffect into the component body so it runs once",
+      "Replace useEffect with useMemo so the response is cached between renders",
+      "Pass [courses] as the dependency array, so it re-runs only when courses changes",
     ],
     answer: 0,
     explanation:
@@ -367,10 +367,10 @@ export const questions: Question[] = [
     prompt:
       "After navigating away from this component, its timer keeps firing. What is missing?\n\nuseEffect(() => {\n  const id = setInterval(tick, 1000);\n}, []);",
     options: [
-      "The effect should be marked async",
-      "tick should be listed in the dependency array",
+      "The effect should be marked async so that React can await the timer and stop it",
+      "tick should be listed in the dependency array: useEffect(() => { ... }, [tick]);",
       "The effect should return a cleanup function: return () => clearInterval(id);",
-      "setInterval should be replaced by setTimeout",
+      "setInterval should be replaced by setTimeout, which React clears on unmount",
     ],
     answer: 2,
     explanation:
@@ -384,8 +384,8 @@ export const questions: Question[] = [
       "A sortable to-do list renders rows with todos.map((t, i) => <TodoRow key={i} todo={t} />). Each row has its own text input. After re-sorting, typed text appears in the wrong rows. What is the best fix?",
     options: [
       "Remove the key prop entirely",
-      "Use key={Math.random()}",
-      "Wrap TodoRow in React.memo",
+      "Use a fresh key on every render: key={Math.random()}",
+      "Wrap TodoRow in React.memo so each row keeps its own text",
       "Use a stable unique id from the data: key={t.id}",
     ],
     answer: 3,
@@ -434,8 +434,8 @@ export const questions: Question[] = [
     options: [
       "Guard first: if (typeof v === 'string') return v.toUpperCase();",
       "Change the parameter type to any",
-      "Use optional chaining: v?.toUpperCase()",
-      "Use a non-null assertion: v!.toUpperCase()",
+      "Use optional chaining so other values are skipped: return v?.toUpperCase();",
+      "Use a non-null assertion to rule out null: return v!.toUpperCase();",
     ],
     answer: 0,
     explanation:
@@ -465,7 +465,7 @@ export const questions: Question[] = [
       "What happens when this is compiled?\n\ninterface Course {\n  title: string;\n}\nconst c: Course = { title: 'Intro to CSS', price: 20 };",
     options: [
       "It compiles, because structural typing always allows extra properties",
-      "Compile error: object literal may only specify known properties, and 'price' does not exist in type 'Course'",
+      "Compile error: 'price' does not exist in type 'Course'",
       "It compiles, and price is silently removed from the object",
       "Compile error: 'title' must be declared readonly",
     ],
@@ -480,10 +480,10 @@ export const questions: Question[] = [
     prompt:
       "Why is s.side allowed on the last line without an error?\n\ntype Shape =\n  | { kind: 'circle'; r: number }\n  | { kind: 'square'; side: number };\n\nfunction area(s: Shape) {\n  if (s.kind === 'circle') return Math.PI * s.r ** 2;\n  return s.side ** 2;\n}",
     options: [
-      "TypeScript does not check property access on union types",
+      "TypeScript does not check property access on union types, so any member's field is allowed",
       "side exists on both members of the union",
-      "The function's return type is inferred as any",
-      "After the 'circle' branch returns, control flow narrows s to the 'square' member",
+      "The function's return type is inferred as any, which switches the check off",
+      "After the 'circle' branch returns, s is narrowed to the 'square' member",
     ],
     answer: 3,
     explanation:
@@ -496,8 +496,8 @@ export const questions: Question[] = [
     prompt:
       "This does not compile. Which fix is correct?\n\nfunction format(id: string | number) {\n  return id.toFixed(2);\n}",
     options: [
-      "Change the parameter to id: string & number",
-      "Add a return type annotation of string",
+      "Use an intersection so both types' methods exist: id: string & number",
+      "Add a return type annotation: function format(id: string | number): string",
       "Narrow first: return typeof id === 'number' ? id.toFixed(2) : id;",
       "Mark the parameter optional: id?: string | number",
     ],
@@ -561,10 +561,10 @@ export const questions: Question[] = [
     topicId: "web-apis-fetch",
     prompt: "Which call correctly sends the object task as JSON to a REST API?",
     options: [
-      "fetch('/api/tasks', { method: 'POST', body: task })",
+      "fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: task })",
       "fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(task) })",
-      "fetch('/api/tasks', { method: 'GET', body: JSON.stringify(task) })",
-      "fetch('/api/tasks', { method: 'POST', json: task })",
+      "fetch('/api/tasks', { method: 'GET', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(task) })",
+      "fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, json: task })",
     ],
     answer: 1,
     explanation:
@@ -594,9 +594,9 @@ export const questions: Question[] = [
       "The server responds to this request with 404 and a JSON error body. What happens?\n\ntry {\n  const res = await fetch('/api/users/999');\n  const data = await res.json();\n  showUser(data);\n} catch (e) {\n  showError();\n}",
     options: [
       "showUser is called with the error body, because fetch only rejects on network failures",
-      "showError is called, because fetch rejects on any 4xx or 5xx status",
+      "showError is called, because fetch rejects its promise on any 4xx or 5xx status code",
       "Neither function is called; the promise stays pending",
-      "res.json() throws because a 404 response cannot have a body",
+      "res.json() throws because a 404 response cannot have a body, so showError is called instead",
     ],
     answer: 0,
     explanation:
@@ -671,8 +671,8 @@ export const questions: Question[] = [
       "A file named secrets.env was committed earlier. You add secrets.env to .gitignore, but git status still reports changes to it. Why, and what fixes it?",
     options: [
       ".gitignore only affects untracked files; run git rm --cached secrets.env and commit",
-      ".gitignore changes only take effect after the next git push",
-      "The .gitignore file must be located inside the .git folder",
+      ".gitignore changes only take effect after the next git push; commit .gitignore and push it",
+      "The .gitignore file must be located inside the .git folder; move it there and commit",
       "Ignore rules need a leading '!' to take effect; change the line to !secrets.env",
     ],
     answer: 0,
@@ -701,10 +701,10 @@ export const questions: Question[] = [
     prompt:
       "git merge feature stops with 'CONFLICT (content): Merge conflict in plan.md'. What is the correct way to finish the merge?",
     options: [
-      "Run git merge feature again until it succeeds",
+      "Run git merge feature again so that Git retries and resolves the conflict itself",
       "Edit plan.md to resolve the conflict markers, git add plan.md, then git commit",
-      "Delete plan.md and run git push",
-      "Run git branch -D feature and then git commit",
+      "Delete plan.md, then run git push so the remote copy is used",
+      "Run git branch -D feature to drop the conflicting branch, and then git commit",
     ],
     answer: 1,
     explanation:
@@ -718,9 +718,9 @@ export const questions: Question[] = [
       "git push to a shared branch is rejected with 'Updates were rejected because the remote contains work that you do not have locally'. What is the appropriate next step?",
     options: [
       "Run git pull (or git pull --rebase) to integrate the remote commits, then push again",
-      "Run git push --force to overwrite the remote branch",
+      "Run git push --force to overwrite the remote branch with your own version of the history",
       "Delete the local repository and clone it again, discarding your commits",
-      "Run git commit --amend and push again",
+      "Run git commit --amend to refresh your latest commit, then push again",
     ],
     answer: 0,
     explanation:

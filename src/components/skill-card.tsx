@@ -30,6 +30,32 @@ function ConfidenceDots({ level }: { level: SkillReadiness["confidence"] }) {
   );
 }
 
+/** The drawer behind every level: what it is, what it counts for, and the evidence it rests on. */
+export function SkillEvidence({ skill, evidence, formulaVersion, label = "View evidence" }: { skill: SkillReadiness; evidence: EvidenceItem[]; formulaVersion: string; label?: string }) {
+  const used = evidence.filter((e) => skill.evidenceIds.includes(e.id));
+  return (
+    <Why label={label} title={skill.name} description={skill.explanation}>
+      <dl className="grid grid-cols-2 gap-4 rounded-2xl bg-foreground/5 dark:bg-white/5 border border-foreground/10 dark:border-white/10 p-5 text-sm">
+        <div><dt className="text-muted-foreground font-medium">Current level</dt><dd className="text-lg font-bold text-foreground dark:text-white">{skill.level}%</dd></div>
+        <div><dt className="text-muted-foreground font-medium">Role target</dt><dd className="text-lg font-bold text-foreground dark:text-white">{skill.target}%</dd></div>
+        <div><dt className="text-muted-foreground font-medium">Adds to readiness</dt><dd className="font-semibold text-foreground/90 dark:text-white/90">{skill.contribution} of {skill.maxContribution} points</dd></div>
+        <div><dt className="text-muted-foreground font-medium">Role priority</dt><dd className="font-semibold text-foreground/90 dark:text-white/90">{PRIORITY_LABELS[skill.priority]} · weight {skill.weight}</dd></div>
+      </dl>
+      <div className="mt-5">
+        <p className="mb-3 font-bold text-foreground dark:text-white">Evidence used</p>
+        {used.length ? (
+          <ul className="space-y-3">{used.map((e) => <EvidenceLine key={e.id} e={e} />)}</ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">No evidence yet. Missing evidence is never assumed to be mastery — or to be failure. It is simply unproven.</p>
+        )}
+      </div>
+      <p className="mt-5 text-xs font-medium text-muted-foreground bg-muted/50 p-3 rounded-xl border">
+        Formula {formulaVersion}. Your level is your most recent assessed score, not your best. Levels above the target do not add extra points.
+      </p>
+    </Why>
+  );
+}
+
 /**
  * A skill is the product's core unit: level, target, distance, evidence, confidence,
  * freshness and opportunity impact — all visible without a click.
@@ -51,9 +77,14 @@ export function SkillCard({ skill, evidence, formulaVersion }: { skill: SkillRea
       </div>
 
       <div className="mt-5 bg-white/50 dark:bg-black/20 rounded-2xl p-5 border border-foreground/5 dark:border-white/5">
-        <p className="flex items-baseline gap-1.5 mb-4">
+        <p className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mb-4">
           <span className="text-3xl lg:text-4xl font-bold tabular-nums tracking-tight text-foreground dark:text-white">{skill.level}<span className="text-xl">%</span></span>
           <span className="text-sm font-medium text-muted-foreground dark:text-white/60">/ {skill.target}% target</span>
+          {skill.range ? (
+            <span className="basis-full text-xs text-muted-foreground dark:text-white/60">
+              An estimate: likely {skill.range.low}–{skill.range.high}%, from {skill.range.questions} question{skill.range.questions === 1 ? "" : "s"}.
+            </span>
+          ) : null}
         </p>
         <LevelBar level={skill.level} target={skill.target} status={skill.status} label={skill.name} />
         <p className="mt-4 text-xs font-medium text-muted-foreground dark:text-white/70">
@@ -106,25 +137,7 @@ export function SkillCard({ skill, evidence, formulaVersion }: { skill: SkillRea
       ) : null}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-foreground/10 dark:border-white/10 pt-5">
-        <Why label="View evidence" title={skill.name} description={skill.explanation}>
-          <dl className="grid grid-cols-2 gap-4 rounded-2xl bg-foreground/5 dark:bg-white/5 border border-foreground/10 dark:border-white/10 p-5 text-sm">
-            <div><dt className="text-muted-foreground font-medium">Current level</dt><dd className="text-lg font-bold text-foreground dark:text-white">{skill.level}%</dd></div>
-            <div><dt className="text-muted-foreground font-medium">Role target</dt><dd className="text-lg font-bold text-foreground dark:text-white">{skill.target}%</dd></div>
-            <div><dt className="text-muted-foreground font-medium">Adds to readiness</dt><dd className="font-semibold text-foreground/90 dark:text-white/90">{skill.contribution} of {skill.maxContribution} points</dd></div>
-            <div><dt className="text-muted-foreground font-medium">Role priority</dt><dd className="font-semibold text-foreground/90 dark:text-white/90">{PRIORITY_LABELS[skill.priority]} · weight {skill.weight}</dd></div>
-          </dl>
-          <div className="mt-5">
-            <p className="mb-3 font-bold text-foreground dark:text-white">Evidence used</p>
-            {used.length ? (
-              <ul className="space-y-3">{used.map((e) => <EvidenceLine key={e.id} e={e} />)}</ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">No evidence yet. Missing evidence is never assumed to be mastery — or to be failure. It is simply unproven.</p>
-            )}
-          </div>
-          <p className="mt-5 text-xs font-medium text-muted-foreground bg-muted/50 p-3 rounded-xl border">
-            Formula {formulaVersion}. Your level is your most recent assessed score, not your best. Levels above the target do not add extra points.
-          </p>
-        </Why>
+        <SkillEvidence skill={skill} evidence={evidence} formulaVersion={formulaVersion} />
 
         {skill.gap < 0 || skill.reassessRecommended ? (
           <Link

@@ -40,6 +40,7 @@ export default async function ResultPage({ params, searchParams }: { params: Pro
     ? getSkill(def.skillIds[0]).topics.flatMap((t) => {
         const s = score.bySkill[def.skillIds[0]]?.topics[t.id];
         return s ? [{ id: t.id, name: t.name, pct: s.pct, correct: s.correct, total: s.total }] : [];
+        // Topics are raw right-over-asked: too few questions each to estimate a level.
       })
     : Object.entries(score.bySkill).map(([skillId, s]) => ({
         id: skillId,
@@ -47,6 +48,8 @@ export default async function ResultPage({ params, searchParams }: { params: Pro
         pct: s.pct,
         correct: s.correct,
         total: s.total,
+        low: s.low,
+        high: s.high,
         target: roleSkill.get(skillId)?.target ?? 0,
         href: `/plan/${skillId}`,
       }));

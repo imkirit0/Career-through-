@@ -41,10 +41,11 @@ export function selectQuestions(def: AssessmentDef, pool: Question[], seed: stri
     }
     const queues = shuffle([...byTopic.values()].map((qs) => shuffle(qs, rand)), rand);
     const picked: Question[] = [];
-    while (picked.length < def.questionsPerSkill && queues.some((q) => q.length)) {
+    const quota = def.questionsBySkill[skillId] ?? 0;
+    while (picked.length < quota && queues.some((q) => q.length)) {
       for (const queue of queues) {
         const q = queue.shift();
-        if (q && picked.length < def.questionsPerSkill) picked.push(q);
+        if (q && picked.length < quota) picked.push(q);
       }
     }
     return picked;

@@ -25,7 +25,7 @@ export default async function CardPage() {
       { done: baselineDone, label: "Complete the baseline assessment", href: "/assessments" },
       { done: baselineDone && readiness.gaps.critical.length === 0, label: `Close all critical gaps (${readiness.gaps.critical.length} remaining)`, href: "/plan" },
       { done: readiness.score >= role.readyThreshold, label: `Reach ${role.readyThreshold}% readiness for ${role.title} (now ${readiness.score}%)`, href: "/dashboard" },
-      { done: hasProject, label: "Submit your role project (recommended — some jobs require it)", href: "/plan#project" },
+      { done: hasProject, label: "Submit your role project (recommended — some jobs require it)", href: "/plan?view=project" },
       { done: hasFinal, label: "Pass the final verification", href: "/assessments" },
     ];
     return (
@@ -79,7 +79,7 @@ export default async function CardPage() {
         <Panel title="Readiness history"><ReadinessTrend data={snapshots.map((s) => ({ date: new Date(s.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }), score: s.score }))} /></Panel>
         <Panel title="Keep it current">
           <p className="text-sm text-muted-foreground">Assessed evidence is valid for 12 months. Re-verify skills to keep your card fresh, and keep closing gaps — recruiters see the date each skill was last verified.</p>
-          <Link href="/evidence" className={cn(buttonVariants({ variant: "secondary" }), "mt-4 h-9 px-4")}>View all evidence</Link>
+          <Link href="/plan?view=history" className={cn(buttonVariants({ variant: "secondary" }), "mt-4 h-9 px-4")}>View all evidence</Link>
         </Panel>
       </div>
     </>

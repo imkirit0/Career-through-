@@ -29,11 +29,11 @@ export type AttemptRow = {
 };
 
 export function quotaBySkill(def: AssessmentDef): Record<string, number> {
-  return Object.fromEntries(def.skillIds.map((id) => [id, def.questionsPerSkill]));
+  return def.questionsBySkill;
 }
 
 export function totalQuestions(def: AssessmentDef): number {
-  return def.skillIds.length * def.questionsPerSkill;
+  return def.skillIds.reduce((n, id) => n + (def.questionsBySkill[id] ?? 0), 0);
 }
 
 /** Questions issued so far, paired with what the candidate chose. */
@@ -54,7 +54,7 @@ export function nextQuestion(attempt: AttemptRow, def: AssessmentDef): Question 
   const progress = Object.fromEntries(
     def.skillIds.map((id) => [
       id,
-      { asked: asked.filter((a) => a.question.skillId === id).length, quota: def.questionsPerSkill },
+      { asked: asked.filter((a) => a.question.skillId === id).length, quota: def.questionsBySkill[id] ?? 0 },
     ]),
   );
   const skillId = nextSkill(progress, def.skillIds);
@@ -97,8 +97,8 @@ function difficultyLabel(question: Question, attempt: AttemptRow, def: Assessmen
   return nextDifficulty(asked, startDifficulty(def.kind));
 }
 
-export function scoreAttemptAdaptive(attempt: AttemptRow, def: AssessmentDef): AdaptiveScore {
-  return scoreAdaptive(askedSoFar(attempt), startDifficulty(def.kind), quotaBySkill(def), attempt.id);
+export function scoreAttemptAdaptive(attempt: AttemptRow): AdaptiveScore {
+  return scoreAdaptive(askedSoFar(attempt));
 }
 
 export type NewEvidence = {
@@ -110,7 +110,7 @@ export type NewEvidence = {
   score: number;
   confidence: Confidence;
   verified: boolean;
-  detail: { correct: number; total: number; title: string; peakCorrect: number; scoringVersion: string };
+  detail: { correct: number; total: number; title: string; peakCorrect: number; scoringVersion: string; low?: number; high?: number };
   createdAt: Date;
   expiresAt: Date;
 };
@@ -140,6 +140,8 @@ export function evidenceFromAdaptive(
       title: def.title,
       peakCorrect: s.peakCorrect,
       scoringVersion: score.scoringVersion,
+      low: s.low,
+      high: s.high,
     },
     createdAt: attempt.completedAt,
     expiresAt,

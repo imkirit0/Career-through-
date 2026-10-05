@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { BadgeCheck, Briefcase, ClipboardCheck, Compass, Dumbbell, FolderCheck, LayoutDashboard, Route, Target, Trophy, User } from "lucide-react";
+import { BadgeCheck, Briefcase, ClipboardCheck, Compass, Dumbbell, LayoutDashboard, Route, Target, Trophy, User } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { NavLink } from "@/components/nav-link";
 import { SignOut } from "@/components/sign-out";
@@ -13,7 +13,6 @@ const NAV = [
   { href: "/practice", label: "Practice", icon: Dumbbell },
   { href: "/arena", label: "Arena", icon: Trophy },
   { href: "/assessments", label: "Assessments", icon: ClipboardCheck },
-  { href: "/evidence", label: "Evidence", icon: FolderCheck },
   { href: "/jobs", label: "Jobs", icon: Briefcase },
   { href: "/card", label: "Career Card", icon: BadgeCheck },
   { href: "/profile", label: "Profile", icon: User },

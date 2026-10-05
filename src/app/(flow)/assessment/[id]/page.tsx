@@ -120,8 +120,10 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
       <ul className="mt-1 space-y-1 text-sm text-muted-foreground">
         <li>• The timer runs on the server and starts when you click Start. It keeps running if you close the tab.</li>
         <li>• Answers are scored on the server. Your browser never receives the answer key.</li>
-        <li>• Questions adapt: get one right and the next is harder, get one wrong and it steps back. Harder questions are worth more, and you cannot return to a previous one.</li>
-        <li>• Skipped questions are marked wrong.</li>
+        <li>• Questions adapt: get one right and the next is harder, get one wrong and it steps back. Harder questions tell us more, and you cannot return to a previous one.</li>
+        {def.kind === "baseline" ? <li>• The skills this role depends on most get six questions each; the others get four or three.</li> : null}
+        <li>• If you don&apos;t know an answer, choose &ldquo;I&apos;m not sure&rdquo;. It counts as wrong, the same as a wrong guess, and keeps your result honest.</li>
+        <li>• Each skill&apos;s level is an estimate from your answers, shown with the range it likely lies in.</li>
         <li>• The interview that follows is written, not timed. It is recorded as evidence of how you explain your work.</li>
         <li>• Tab switches are recorded. More than {MAX_TAB_SWITCHES} and the result is recorded but not marked verified.</li>
         <li>• An answer sent more than {GRACE_SECONDS}s after the clock runs out is not accepted, and an attempt that runs out of time is not scored.</li>

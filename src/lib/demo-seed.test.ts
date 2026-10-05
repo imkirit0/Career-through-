@@ -11,7 +11,7 @@ import { QUESTIONS, getAssessment } from "@/content/assessments";
 import { jobsForRole } from "@/content/jobs";
 import { selectQuestions } from "./assessment";
 import { evidenceFromAdaptive } from "./attempt";
-import { scoreAdaptive, startDifficulty } from "./adaptive";
+import { scoreAdaptive } from "./adaptive";
 import { computeImpact } from "./impact";
 import { matchJobs } from "./matching";
 import { computeReadiness } from "./readiness";
@@ -49,18 +49,13 @@ describe.skipIf(!process.env.SEED_DEMO)("seed demo candidate", () => {
     const retakeScore = (skillId: string, correct: number) => {
       const def = getAssessment(`skill:${skillId}`)!;
       const qs = selectQuestions(def, QUESTIONS, "seed");
-      return scoreOf(qs, new Map([[skillId, correct]]), def).bySkill[skillId]?.pct ?? 0;
+      return scoreOf(qs, new Map([[skillId, correct]])).bySkill[skillId]?.pct ?? 0;
     };
 
     /** Score a set of questions as the adaptive engine would. */
-    const scoreOf = (questions: typeof baselineQs, correct: Map<string, number>, def: { kind: "baseline" | "skill" | "final"; questionsPerSkill: number; skillIds: string[] }) => {
+    const scoreOf = (questions: typeof baselineQs, correct: Map<string, number>) => {
       const answers = answersFor(questions, correct);
-      return scoreAdaptive(
-        questions.map((q) => ({ question: q, choice: answers[q.id] })),
-        startDifficulty(def.kind),
-        Object.fromEntries(def.skillIds.map((id) => [id, def.questionsPerSkill])),
-        "seed",
-      );
+      return scoreAdaptive(questions.map((q) => ({ question: q, choice: answers[q.id] })));
     };
 
     /** Answer the issued questions so each skill lands on a chosen number correct. */
@@ -85,7 +80,7 @@ describe.skipIf(!process.env.SEED_DEMO)("seed demo candidate", () => {
         skillIds.map((id) => [id, strong.includes(id) ? 2 + rand(2) : weak.includes(id) ? rand(2) : 1 + rand(2)] as const),
       );
       const correct = retakeSkills.map(() => 2 + rand(5));
-      const baselineTry = evidenceFromAdaptive(baselineDef, scoreOf(baselineQs, baseline, baselineDef), {
+      const baselineTry = evidenceFromAdaptive(baselineDef, scoreOf(baselineQs, baseline), {
         id: baselineId,
         verified: true,
         completedAt: new Date(Date.now() - 12 * 86_400_000),
@@ -176,7 +171,7 @@ describe.skipIf(!process.env.SEED_DEMO)("seed demo candidate", () => {
       const def = getAssessment(assessmentId)!;
       const completedAt = new Date(Date.now() - daysAgo * 86_400_000);
       const answers = answersFor(questions, correct);
-      const score = scoreOf(questions, correct, def);
+      const score = scoreOf(questions, correct);
       await db.transaction(async (tx) => {
         const before = await liveReadiness(userId, ROLE, tx);
         const rows = evidenceFromAdaptive(def, score, { id, verified: true, completedAt });

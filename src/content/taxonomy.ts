@@ -133,7 +133,8 @@ export type AssessmentDef = {
   title: string;
   roleId: string | null;
   skillIds: string[];
-  questionsPerSkill: number;
+  /** How many questions each skill is asked. More on the skills where a wrong call costs the student most. */
+  questionsBySkill: Record<string, number>;
   durationMin: number;
 };
 
