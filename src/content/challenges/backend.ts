@@ -26,6 +26,37 @@ export const challenges: Challenge[] = [
             out.append(str(i))
     return out`,
     checks: ["fizzbuzz(15)", "fizzbuzz(5)", "fizzbuzz(1)", "fizzbuzz(0)", "fizzbuzz(30)[-1]"],
+    java: {
+      brief:
+        "Write fizzbuzz(n) that returns a List<String> for the numbers 1 to n. Use \"Fizz\" for multiples of 3, \"Buzz\" for multiples of 5, \"FizzBuzz\" for multiples of both, and the number itself as a string otherwise.\n\nExample: fizzbuzz(5) returns [\"1\", \"2\", \"Fizz\", \"4\", \"Buzz\"]. fizzbuzz(0) returns an empty list.",
+      starter: `import java.util.*;
+
+class Solution {
+    static List<String> fizzbuzz(int n) {
+        // your code
+        return null;
+    }
+}`,
+      solution: `import java.util.*;
+
+class Solution {
+    static List<String> fizzbuzz(int n) {
+        List<String> out = new ArrayList<>();
+        for (int i = 1; i <= n; i++) {
+            if (i % 15 == 0) out.add("FizzBuzz");
+            else if (i % 3 == 0) out.add("Fizz");
+            else if (i % 5 == 0) out.add("Buzz");
+            else out.add(String.valueOf(i));
+        }
+        return out;
+    }
+}`,
+      checks: ["Solution.fizzbuzz(15)", "Solution.fizzbuzz(5)", "Solution.fizzbuzz(1)", "Solution.fizzbuzz(0)", "Solution.fizzbuzz(30).get(29)"],
+      hints: [
+        "Test the \"both\" case (i % 15 == 0) before the single cases, or the single case will win every time.",
+        "Count with for (int i = 1; i <= n; i++) and add String.valueOf(i) for plain numbers.",
+      ],
+    },
     hints: [
       "Test the \"both\" case before the single cases, or the single case will win every time.",
       "range(1, n + 1) counts from 1 up to and including n.",
@@ -52,6 +83,31 @@ export const challenges: Challenge[] = [
         steps += 1
     return steps`,
     checks: ["collatz_steps(1)", "collatz_steps(6)", "collatz_steps(7)", "collatz_steps(27)", "collatz_steps(97)"],
+    java: {
+      brief:
+        "Write collatzSteps(n) for a positive integer n. Repeatedly replace n with n / 2 when it is even and 3 * n + 1 when it is odd, until n becomes 1. Return how many replacements that took.\n\nExample: collatzSteps(6) returns 8, because 6 -> 3 -> 10 -> 5 -> 16 -> 8 -> 4 -> 2 -> 1. collatzSteps(1) returns 0.",
+      starter: `class Solution {
+    static int collatzSteps(long n) {
+        // your code
+        return -1;
+    }
+}`,
+      solution: `class Solution {
+    static int collatzSteps(long n) {
+        int steps = 0;
+        while (n != 1) {
+            n = n % 2 == 0 ? n / 2 : 3 * n + 1;
+            steps++;
+        }
+        return steps;
+    }
+}`,
+      checks: ["Solution.collatzSteps(1)", "Solution.collatzSteps(6)", "Solution.collatzSteps(7)", "Solution.collatzSteps(27)", "Solution.collatzSteps(97)"],
+      hints: [
+        "A while (n != 1) loop fits better than a for loop, because you do not know the step count in advance.",
+        "n is a long so 3 * n + 1 cannot overflow on the bigger inputs.",
+      ],
+    },
     hints: [
       "A while loop that runs until n == 1 fits better than a for loop, because you do not know the step count in advance.",
       "Use // for integer division so n stays an int.",
@@ -80,6 +136,40 @@ export const challenges: Challenge[] = [
       "sorted(group_by_initial(['one']).items())",
       "sorted(group_by_initial([]).items())",
     ],
+    java: {
+      brief:
+        "Write groupByInitial(words) that returns a Map<String, List<String>> mapping each lowercase first letter to the list of words that start with it, in the order they appeared. Keep the words themselves unchanged.\n\nExample: groupByInitial(List.of(\"apple\", \"Banana\", \"avocado\")) returns {a=[apple, avocado], b=[Banana]}. The order of the keys does not matter.",
+      starter: `import java.util.*;
+
+class Solution {
+    static Map<String, List<String>> groupByInitial(List<String> words) {
+        // your code
+        return null;
+    }
+}`,
+      solution: `import java.util.*;
+
+class Solution {
+    static Map<String, List<String>> groupByInitial(List<String> words) {
+        Map<String, List<String>> groups = new HashMap<>();
+        for (String word : words) {
+            String key = word.substring(0, 1).toLowerCase();
+            groups.computeIfAbsent(key, k -> new ArrayList<>()).add(word);
+        }
+        return groups;
+    }
+}`,
+      checks: [
+        `Solution.groupByInitial(List.of("apple", "Banana", "avocado", "cherry", "blueberry"))`,
+        `Solution.groupByInitial(List.of("Zed", "zoo", "Zap"))`,
+        `Solution.groupByInitial(List.of("one"))`,
+        `Solution.groupByInitial(List.of())`,
+      ],
+      hints: [
+        "map.computeIfAbsent(key, k -> new ArrayList<>()) returns the list for a key, creating it the first time.",
+        "word.substring(0, 1).toLowerCase() gives the lowercase first letter as a String.",
+      ],
+    },
     hints: [
       "Look up the key first; if it is not there yet, start a new empty list before appending. dict.setdefault does both in one call.",
       "word[0].lower() gives the lowercase first letter.",
@@ -114,6 +204,44 @@ export const challenges: Challenge[] = [
       "balanced('def f(a, b): return [a, {b: 1}]')",
       "balanced('())')",
     ],
+    java: {
+      brief:
+        "Write balanced(s) that returns true if every opening bracket in s is closed by the matching bracket in the right order, and false otherwise. Only (), [] and {} count; any other character is ignored.\n\nExample: balanced(\"([]{})\") is true, balanced(\"([)]\") is false, balanced(\"((\") is false, and balanced(\"\") is true.",
+      starter: `class Solution {
+    static boolean balanced(String s) {
+        // your code
+        return false;
+    }
+}`,
+      solution: `import java.util.*;
+
+class Solution {
+    static boolean balanced(String s) {
+        Deque<Character> stack = new ArrayDeque<>();
+        for (char ch : s.toCharArray()) {
+            if ("([{".indexOf(ch) >= 0) {
+                stack.push(ch);
+            } else if (")]}".indexOf(ch) >= 0) {
+                char open = "([{".charAt(")]}".indexOf(ch));
+                if (stack.isEmpty() || stack.pop() != open) return false;
+            }
+        }
+        return stack.isEmpty();
+    }
+}`,
+      checks: [
+        `Solution.balanced("([]{})")`,
+        `Solution.balanced("([)]")`,
+        `Solution.balanced("((")`,
+        `Solution.balanced("")`,
+        `Solution.balanced("int f(int a) { return a[0]; }")`,
+        `Solution.balanced("())")`,
+      ],
+      hints: [
+        "Push every opening bracket onto an ArrayDeque; when you meet a closing one, the most recent opening bracket must match it.",
+        "Two separate failure modes: a closing bracket with nothing to match, and leftovers on the stack at the end.",
+      ],
+    },
     hints: [
       "Push every opening bracket onto a list; when you meet a closing one, the most recent opening bracket must match it.",
       "Two separate failure modes: a closing bracket with nothing to match, and leftovers on the stack at the end.",
@@ -146,6 +274,39 @@ export const challenges: Challenge[] = [
       "count_dupes(list(range(20000)) * 2)",
       "count_dupes(list(range(30000)) + [5, 5, 7, 7, 7, 8])",
     ],
+    java: {
+      brief:
+        "Write countDupes(items) that returns how many distinct values appear more than once in the array. It must stay fast for 100,000 items: one of the checks passes 40,000 values, and a solution that scans the whole array once per item will be far too slow.\n\nExample: countDupes(new int[]{1, 2, 2, 3, 3, 3}) returns 2 (the values 2 and 3). countDupes(new int[]{}) returns 0.",
+      starter: `class Solution {
+    static int countDupes(int[] items) {
+        // your code
+        return -1;
+    }
+}`,
+      solution: `import java.util.*;
+
+class Solution {
+    static int countDupes(int[] items) {
+        Set<Integer> seen = new HashSet<>();
+        Set<Integer> dupes = new HashSet<>();
+        for (int x : items) {
+            if (!seen.add(x)) dupes.add(x);
+        }
+        return dupes.size();
+    }
+}`,
+      checks: [
+        "Solution.countDupes(new int[]{1, 2, 2, 3, 3, 3})",
+        "Solution.countDupes(new int[]{})",
+        "Solution.countDupes(new int[]{4, 5, 6})",
+        "Solution.countDupes(IntStream.concat(IntStream.range(0, 20000), IntStream.range(0, 20000)).toArray())",
+        "Solution.countDupes(IntStream.concat(IntStream.range(0, 30000), IntStream.of(5, 5, 7, 7, 7, 8)).toArray())",
+      ],
+      hints: [
+        "A nested loop over the array is O(n squared). Checking membership in a HashSet is O(1).",
+        "Set.add returns false when the value was already there, which tells you it is a duplicate.",
+      ],
+    },
     hints: [
       "items.count(x) inside a loop is O(n) per item, so the whole thing is O(n squared). Checking membership in a set is O(1).",
       "Keep one set of values you have seen and another of values you have seen twice; the answer is the size of the second.",
@@ -182,6 +343,47 @@ export const challenges: Challenge[] = [
       "second_largest([1, 2])",
       "second_largest([])",
     ],
+    java: {
+      brief:
+        "secondLargest(nums) should return the second-largest distinct value in the array, or null if there are fewer than two distinct values. The implementation below returns wrong answers for several inputs. Fix it so every check passes.\n\nExample: secondLargest(new int[]{3, 1, 4, 4, 2}) returns 3, secondLargest(new int[]{5, 5, 5}) returns null, and secondLargest(new int[]{-2, -7, -1}) returns -2.",
+      starter: `class Solution {
+    static Integer secondLargest(int[] nums) {
+        int largest = 0;
+        int second = 0;
+        for (int n : nums) {
+            if (n > largest) {
+                largest = n;
+            } else if (n > second) {
+                second = n;
+            }
+        }
+        return second;
+    }
+}`,
+      solution: `import java.util.*;
+
+class Solution {
+    static Integer secondLargest(int[] nums) {
+        TreeSet<Integer> distinct = new TreeSet<>();
+        for (int n : nums) distinct.add(n);
+        if (distinct.size() < 2) return null;
+        distinct.pollLast();
+        return distinct.last();
+    }
+}`,
+      checks: [
+        "Solution.secondLargest(new int[]{3, 1, 4, 4, 2})",
+        "Solution.secondLargest(new int[]{5, 5, 5})",
+        "Solution.secondLargest(new int[]{-2, -7, -1})",
+        "Solution.secondLargest(new int[]{10})",
+        "Solution.secondLargest(new int[]{1, 2})",
+        "Solution.secondLargest(new int[]{})",
+      ],
+      hints: [
+        "Trace the code by hand with {3, 1, 4, 4, 2} and with {-2, -7, -1}. Where does each wrong answer come from?",
+        "Starting at 0 assumes positive numbers. A TreeSet keeps distinct values sorted, so the last two are the answer.",
+      ],
+    },
     hints: [
       "Trace the code by hand with [3, 1, 4, 4, 2] and with [-2, -7, -1]. Where does each wrong answer come from?",
       "Starting at 0 assumes the numbers are positive, and when a new largest appears the old largest has to go somewhere. You may also replace the loop with a different approach entirely.",

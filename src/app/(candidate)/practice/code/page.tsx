@@ -5,13 +5,14 @@ import { Check } from "lucide-react";
 import { cn } from "cn";
 import { challengesForSkill } from "@/content/challenges";
 import { getSkill } from "@/content/skills";
+import type { Challenge } from "@/content/taxonomy";
 import { getSolvedChallenges, requireCandidate } from "@/lib/data";
 import { CodeRun } from "./code-run";
 
 export const metadata: Metadata = { title: "Code challenges" };
 
-export default async function CodePracticePage({ searchParams }: { searchParams: Promise<{ skill?: string; c?: string }> }) {
-  const { skill: skillId, c } = await searchParams;
+export default async function CodePracticePage({ searchParams }: { searchParams: Promise<{ skill?: string; c?: string; lang?: string }> }) {
+  const { skill: skillId, c, lang } = await searchParams;
   const { user, role } = await requireCandidate();
   const pool = skillId && role.skills.some((s) => s.skillId === skillId) ? challengesForSkill(skillId) : [];
   if (!skillId || !pool.length) redirect("/practice");
@@ -21,7 +22,10 @@ export default async function CodePracticePage({ searchParams }: { searchParams:
   const index = pool.indexOf(active);
   const next = pool.slice(index + 1).find((x) => !solved.has(x.id)) ?? pool.find((x) => !solved.has(x.id) && x.id !== active.id);
   const skill = getSkill(skillId);
-  const href = (id: string) => `/practice/code?skill=${skillId}&c=${id}`;
+  // Challenges with a Java version can be done in either language; the choice rides in the URL.
+  const java = lang === "java" && active.java ? active.java : null;
+  const challenge: Challenge = java ? { ...active, ...java, language: "java" } : active;
+  const href = (id: string, l = java ? "java" : null) => `/practice/code?skill=${skillId}&c=${id}${l ? `&lang=${l}` : ""}`;
 
   return (
     <>
@@ -49,8 +53,27 @@ export default async function CodePracticePage({ searchParams }: { searchParams:
       </div>
 
       <CodeRun
-        key={active.id}
-        challenge={active}
+        key={`${active.id}-${challenge.language}`}
+        challenge={challenge}
+        switcher={
+          active.java ? (
+            <nav aria-label="Language" className="flex w-fit gap-1 rounded-xl bg-secondary p-1">
+              {[
+                { id: null, label: "Python" },
+                { id: "java", label: "Java" },
+              ].map((l) => (
+                <Link
+                  key={l.label}
+                  href={href(active.id, l.id)}
+                  aria-current={(l.id === "java") === Boolean(java) ? "page" : undefined}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm"
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </nav>
+          ) : null
+        }
         topic={skill.topics.find((t) => t.id === active.topicId)?.name ?? ""}
         number={index + 1}
         solved={solved.has(active.id)}

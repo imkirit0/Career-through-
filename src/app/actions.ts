@@ -12,6 +12,8 @@ import type { Question, Role } from "@/content/taxonomy";
 import { getAssessment } from "@/content/assessments";
 import { getPracticeQuestion } from "@/content/practice";
 import { getChallenge } from "@/content/challenges";
+import { runJava } from "@/lib/code/java";
+import type { RunResult } from "@/lib/code/run";
 import { isArenaSubject } from "@/content/arena";
 import { ROUND } from "@/lib/arena";
 import { finishRound, startRound } from "@/lib/arena-data";
@@ -599,6 +601,36 @@ export async function completeChallenge(input: unknown): Promise<{ ok: true } | 
   if (!challenge || !role.skills.some((s) => s.skillId === challenge.skillId)) return { error: "That challenge could not be found." };
   await logEvent(user.id, "CODE_CHALLENGE_PASSED", { challengeId: challenge.id, skillId: challenge.skillId });
   return { ok: true };
+}
+
+/** The reference solution's run, per challenge: it never changes, so one sandbox per server instance. */
+const javaReference = new Map<string, Promise<RunResult>>();
+
+/**
+ * Run Java for a code challenge in a Vercel Sandbox. Checks come from the server's copy of
+ * the challenge, never the browser; `cases` only says how many of them to try.
+ */
+export async function runJavaChallenge(input: unknown): Promise<RunResult> {
+  const parsed = z
+    .object({ challengeId: z.string().max(80), code: z.string().max(20_000), cases: z.number().int().min(1).max(50), reference: z.boolean().optional() })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "That code could not be run." };
+  const { role } = await requireCandidate();
+  const challenge = getChallenge(parsed.data.challengeId);
+  if (!challenge?.java || !role.skills.some((s) => s.skillId === challenge.skillId)) return { ok: false, error: "That challenge could not be found." };
+  const { java } = challenge;
+
+  if (parsed.data.reference) {
+    let run = javaReference.get(challenge.id);
+    if (!run) {
+      run = runJava(java.solution, java.checks);
+      javaReference.set(challenge.id, run);
+    }
+    const result = await run;
+    if (!result.ok) javaReference.delete(challenge.id);
+    return result;
+  }
+  return runJava(parsed.data.code, java.checks.slice(0, parsed.data.cases));
 }
 
 // ── Arena ──────────────────────────────────────────────────────

@@ -9,10 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LinkArrow, Spinner } from "@/components/pending";
 import type { Challenge } from "@/content/taxonomy";
 import { mark, rowOrderMatters, runCode, type RunResult, type Table, type Verdict } from "@/lib/code/run";
-import { completeChallenge } from "../../../actions";
+import { completeChallenge, runJavaChallenge } from "../../../actions";
 
-const LANGUAGE_LABEL = { sql: "SQL · SQLite", javascript: "JavaScript", python: "Python" };
-const RUNTIME_NOTE = { sql: "Loading SQLite (about 1 MB, once)…", javascript: "Starting…", python: "Loading Python (about 10 MB, once)…" };
+const LANGUAGE_LABEL = { sql: "SQL · SQLite", javascript: "JavaScript", python: "Python", java: "Java" };
+const RUNTIME_NOTE = { sql: "Loading SQLite (about 1 MB, once)…", javascript: "Starting…", python: "Loading Python (about 10 MB, once)…", java: "Starting a Java sandbox (a few seconds)…" };
 
 /** Test cases the student can see and Run against. Submit also tries the rest, unseen. */
 const SAMPLES = 3;
@@ -25,9 +25,10 @@ const tableNames = (setup = "") => [...setup.matchAll(/create\s+table\s+(\w+)/gi
 
 /**
  * One challenge: brief on the left; editor, test cases and result on the right.
- * Run tries the visible test cases, Submit tries them all. Marked in the browser.
+ * Run tries the visible test cases, Submit tries them all. Marked in the browser; Java
+ * is run on the server, in a sandbox.
  */
-export function CodeRun({ challenge, topic, number, solved, nextHref, skillId }: { challenge: Challenge; topic: string; number: number; solved: boolean; nextHref: string | null; skillId: string }) {
+export function CodeRun({ challenge, topic, number, solved, nextHref, skillId, switcher }: { challenge: Challenge; topic: string; number: number; solved: boolean; nextHref: string | null; skillId: string; switcher?: ReactNode }) {
   const [code, setCode] = useState(challenge.starter);
   const [busy, setBusy] = useState<"run" | "submit" | null>(null);
   /** The reference solution's run: where every expected output comes from. */
@@ -45,27 +46,32 @@ export function CodeRun({ challenge, topic, number, solved, nextHref, skillId }:
   const names = tableNames(challenge.setup);
   const samples = challenge.checks.slice(0, SAMPLES);
   const hidden = challenge.checks.length - samples.length;
+  const run = (source: string, checks: string[], reference = false) =>
+    challenge.language === "java"
+      ? runJavaChallenge({ challengeId: challenge.id, code: source, cases: checks.length, reference })
+      : runCode(challenge.language, source, checks, challenge.setup);
 
   // Expected outputs (and the SQL tables) are worked out here, while the student reads.
   useEffect(() => {
     let live = true;
-    runCode(challenge.language, challenge.solution, challenge.checks, challenge.setup).then((r) => live && setReference(r));
+    run(challenge.solution, challenge.checks, true).then((r) => live && setReference(r));
     Promise.all(tableNames(challenge.setup).map((t) => runCode("sql", `SELECT * FROM ${t};`, [], challenge.setup))).then(
       (all) => live && setTables(all.map((r) => (r.ok ? r.rows ?? null : null))),
     );
     return () => {
       live = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run only depends on challenge
   }, [challenge]);
 
   async function execute(kind: "run" | "submit") {
     setBusy(kind);
     // Run stops at the visible cases, so nothing a hidden case prints leaks into the output.
     const tried = kind === "run" ? samples : challenge.checks;
-    const student = await runCode(challenge.language, code, tried, challenge.setup);
+    const student = await run(code, tried);
     let verdict: Verdict | null = null;
     if (student.ok) {
-      const ref = reference?.ok ? reference : await runCode(challenge.language, challenge.solution, challenge.checks, challenge.setup);
+      const ref = reference?.ok ? reference : await run(challenge.solution, challenge.checks, true);
       setReference(ref);
       verdict = mark({ ...challenge, checks: tried }, student, ref);
     }
@@ -87,7 +93,7 @@ export function CodeRun({ challenge, topic, number, solved, nextHref, skillId }:
     e.preventDefault();
     const el = e.currentTarget;
     const { selectionStart: s, selectionEnd: end } = el;
-    const indent = challenge.language === "python" ? "    " : "  ";
+    const indent = challenge.language === "python" || challenge.language === "java" ? "    " : "  ";
     setCode(code.slice(0, s) + indent + code.slice(end));
     requestAnimationFrame(() => el.setSelectionRange(s + indent.length, s + indent.length));
   }
@@ -178,6 +184,7 @@ export function CodeRun({ challenge, topic, number, solved, nextHref, skillId }:
       </section>
 
       <section className="min-w-0 space-y-4">
+        {switcher}
         <div className="card-soft overflow-hidden">
           <label htmlFor="code" className="sr-only">Your code</label>
           <textarea

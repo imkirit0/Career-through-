@@ -155,7 +155,7 @@ export function bands(overrides: Partial<Record<BandId, number>> = {}): Band[] {
 // Small exercises run and marked in the browser (SQLite and Python as WebAssembly,
 // JavaScript in a worker). Practice only: never evidence.
 
-export type ChallengeLanguage = "sql" | "javascript" | "python";
+export type ChallengeLanguage = "sql" | "javascript" | "python" | "java";
 
 export type Challenge = {
   id: string;
@@ -177,6 +177,12 @@ export type Challenge = {
    */
   checks: string[];
   hints: string[];
+  /**
+   * The same exercise in Java, offered as a language switch. Run in a Vercel Sandbox on the
+   * server. The code is a class named Solution; checks are Java expressions like
+   * `Solution.total(new int[]{1, 2})`, each giving a value Json can write.
+   */
+  java?: { brief: string; starter: string; solution: string; checks: string[]; hints: string[] };
 };
 
 // ── Interview ──────────────────────────────────────────────────

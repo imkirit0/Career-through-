@@ -5,6 +5,9 @@ import type { Challenge, ChallengeLanguage } from "@/content/taxonomy";
 // Runs student code in the browser, each language in its own Web Worker so a runaway
 // loop can be killed. SQLite and Python arrive as WebAssembly from a CDN on first use.
 
+/** Java runs on the server instead: see lib/code/java.ts. */
+export type BrowserLanguage = Exclude<ChallengeLanguage, "java">;
+
 export type Table = { columns: string[]; values: unknown[][] };
 
 export type RunResult =
@@ -24,9 +27,9 @@ const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/";
 const SQLJS = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/";
 
 /** Seconds a single run may take before the worker is killed. Python is slower to start. */
-const TIMEOUT: Record<ChallengeLanguage, number> = { javascript: 3, sql: 5, python: 10 };
+const TIMEOUT: Record<BrowserLanguage, number> = { javascript: 3, sql: 5, python: 10 };
 
-const WORKER_SOURCE: Record<ChallengeLanguage, string> = {
+const WORKER_SOURCE: Record<BrowserLanguage, string> = {
   javascript: `
     postMessage({ ready: true });
     self.onmessage = (e) => {
@@ -95,9 +98,9 @@ json.dumps({"ok": _err is None, "error": _err, "output": _buf.getvalue(), "resul
 };
 
 type Slot = { worker: Worker; ready: Promise<void> };
-const slots: Partial<Record<ChallengeLanguage, Slot>> = {};
+const slots: Partial<Record<BrowserLanguage, Slot>> = {};
 
-function slot(language: ChallengeLanguage): Slot {
+function slot(language: BrowserLanguage): Slot {
   const existing = slots[language];
   if (existing) return existing;
   const worker = new Worker(URL.createObjectURL(new Blob([WORKER_SOURCE[language]], { type: "text/javascript" })));
@@ -118,13 +121,13 @@ function slot(language: ChallengeLanguage): Slot {
 // answer each other. The page runs the reference solution while the student is typing.
 let queue: Promise<unknown> = Promise.resolve();
 
-export function runCode(language: ChallengeLanguage, code: string, checks: string[], setup?: string): Promise<RunResult> {
+export function runCode(language: BrowserLanguage, code: string, checks: string[], setup?: string): Promise<RunResult> {
   const run = queue.then(() => runNow(language, code, checks, setup));
   queue = run;
   return run;
 }
 
-async function runNow(language: ChallengeLanguage, code: string, checks: string[], setup?: string): Promise<RunResult> {
+async function runNow(language: BrowserLanguage, code: string, checks: string[], setup?: string): Promise<RunResult> {
   const s = slot(language);
   try {
     await s.ready;
