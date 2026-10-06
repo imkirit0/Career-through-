@@ -65,9 +65,8 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
         {/* The recommended start: one obvious thing to do. */}
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-950 via-zinc-900 to-[oklch(0.3_0.08_290)] p-6 text-white shadow-xl sm:p-8 lg:col-span-2">
           <div className="pointer-events-none absolute -right-16 -top-16 size-72 rounded-full bg-primary/30 blur-[90px]" aria-hidden />
-          <CodeWindow className="absolute -right-6 top-1/2 hidden w-[46%] -translate-y-1/2 rotate-[-4deg] md:block" />
 
-          <div className="relative max-w-md md:max-w-[55%]">
+          <div className="relative max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-wider text-violet-300">Recommended for you</p>
             <h2 className="mt-3 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
               Warm up with a <span className="text-violet-300">{name}</span> drill
