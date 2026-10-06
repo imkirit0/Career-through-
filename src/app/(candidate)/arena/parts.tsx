@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Check, ChevronRight, Clock, Minus, Play, Trophy, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart3, Check, ChevronRight, Clock, Cloud, Crown, Database, FileCode2, Minus, Monitor, Play, Timer, Trophy, X, Zap, type LucideIcon } from "lucide-react";
 import { cn } from "cn";
 import { buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,42 +39,84 @@ export function ScoringRules() {
   );
 }
 
+const TILE = "relative flex items-center gap-4 overflow-hidden rounded-3xl border border-foreground/10 p-5 shadow-sm backdrop-blur";
+
 export function ArenaStats({ week }: { week: Board }) {
   const you = week.you;
-  const tiles = [
-    { label: "Points this week", value: String(you?.points ?? 0), sub: you ? "resets Monday" : "play a round to get on the board" },
-    { label: "Your rank", value: you ? `#${you.rank}` : "—", sub: you ? `of ${week.players} this week` : week.players ? `${week.players} ranked so far` : "nobody is ranked yet" },
-    { label: "Rounds this week", value: String(you?.rounds ?? 0), sub: `${ROUND.count} questions · ${ROUND.seconds / 60} minutes each` },
-  ];
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-3">
-      {tiles.map((t) => (
-        <div key={t.label} className="card-soft p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.label}</p>
-          <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight">{t.value}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{t.sub}</p>
-        </div>
-      ))}
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
+      <div className={cn(TILE, "bg-card/70")}>
+        <StatIcon icon={BarChart3} tone="bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300" />
+        <StatText label="Points this week" value={String(you?.points ?? 0)} sub={you ? "Resets Monday" : "Play a round to get on the board"} />
+        <svg viewBox="0 0 120 50" className="pointer-events-none absolute bottom-3 right-4 hidden h-12 w-28 text-violet-400 lg:block" aria-hidden>
+          <path d="M2 40 C 20 38, 28 20, 44 24 S 66 10, 78 22 S 100 30, 118 8 L118 50 L2 50 Z" className="fill-current opacity-15" />
+          <path d="M2 40 C 20 38, 28 20, 44 24 S 66 10, 78 22 S 100 30, 118 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </div>
+      <div className={cn(TILE, "bg-gradient-to-br from-amber-50 to-orange-100/60 dark:from-amber-500/10 dark:to-orange-500/5")}>
+        <StatIcon icon={Crown} tone="bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300" />
+        <StatText label="Your rank" value={you ? `#${you.rank}` : "—"} sub={you ? `of ${week.players} this week` : week.players ? `${week.players} ranked so far` : "Nobody is ranked yet"} />
+        <Trophy className="pointer-events-none absolute -bottom-3 right-4 hidden size-20 rotate-12 text-amber-400/70 lg:block" aria-hidden />
+      </div>
+      <div className={cn(TILE, "bg-gradient-to-br from-card/70 to-sky-50 dark:to-sky-500/5")}>
+        <StatIcon icon={Clock} tone="bg-sky-100 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300" />
+        <StatText label="Rounds this week" value={String(you?.rounds ?? 0)} sub={`${ROUND.count} questions · ${ROUND.seconds / 60} minutes each`} />
+        <Timer className="pointer-events-none absolute -bottom-2 right-4 hidden size-20 -rotate-12 text-sky-400/60 lg:block" aria-hidden />
+      </div>
     </div>
   );
 }
 
+function StatIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: string }) {
+  return (
+    <span className={cn("grid size-14 shrink-0 place-items-center rounded-full", tone)}>
+      <Icon className="size-6" aria-hidden />
+    </span>
+  );
+}
+
+function StatText({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="relative min-w-0">
+      <p className="text-sm font-medium">{label}</p>
+      <p className="mt-0.5 text-3xl font-semibold leading-tight tabular-nums tracking-tight">{value}</p>
+      <p className="text-xs text-muted-foreground">{sub}</p>
+    </div>
+  );
+}
+
+/** A colour and an emblem per subject, so the cards can be told apart at a glance. */
+const SUBJECT_LOOK: Record<ArenaSubjectId, { icon: LucideIcon; card: string; art: string }> = {
+  python: { icon: FileCode2, card: "from-amber-50/80", art: "text-amber-400" },
+  "python-ml": { icon: BarChart3, card: "from-emerald-50/80", art: "text-emerald-400" },
+  dbms: { icon: Database, card: "from-orange-50/80", art: "text-orange-400" },
+  "computing-fundamentals": { icon: Monitor, card: "from-sky-50/80", art: "text-sky-500" },
+  "cloud-fundamentals": { icon: Cloud, card: "from-violet-50/80", art: "text-violet-400" },
+};
+
 export function SubjectCards({ start, rankedLeft }: { start: Start; rankedLeft: Record<ArenaSubjectId, number> }) {
   return (
-    <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {ARENA_SUBJECTS.map((s) => {
         const left = rankedLeft[s.id];
+        const look = SUBJECT_LOOK[s.id];
+        const Art = look.icon;
         return (
-          <li key={s.id} className="flex flex-col rounded-2xl border border-foreground/10 bg-card/60 p-4">
-            <p className="font-semibold">{s.name}</p>
-            <p className="mt-1 flex-1 text-sm text-muted-foreground">{s.blurb}</p>
-            <p className={cn("mt-3 text-xs font-medium", left ? "text-primary" : "text-muted-foreground")}>
-              {left ? `${left} ranked round${left === 1 ? "" : "s"} left today` : "Today's ranked rounds are used. Practice only until tomorrow."}
+          <li key={s.id} className={cn("group relative flex flex-col overflow-hidden rounded-2xl border border-foreground/10 bg-gradient-to-br to-card/80 p-4 shadow-sm transition-shadow hover:shadow-md dark:from-card/60", look.card)}>
+            <Art className={cn("pointer-events-none absolute right-5 top-5 size-16 transition-transform duration-300 group-hover:scale-110", look.art)} strokeWidth={1.5} aria-hidden />
+            <div className="relative flex-1 pr-20">
+              <p className="text-lg font-semibold tracking-tight">{s.name}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{s.blurb}</p>
+            </div>
+            <p className={cn("relative mt-3 inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium", left ? "bg-primary/10 text-primary" : "bg-foreground/5 text-muted-foreground")}>
+              <Zap className="size-3.5" aria-hidden />
+              {left ? `${left} ranked round${left === 1 ? "" : "s"} left today` : "Practice only until tomorrow"}
             </p>
-            <form action={start} className="mt-2">
+            <form action={start} className="relative mt-3">
               <input type="hidden" name="subject" value={s.id} />
-              <SubmitButton variant={left ? "default" : "outline"} className="h-10 w-full" pendingLabel="Dealing…">
-                <Play className="size-4" aria-hidden /> {left ? "Play" : "Play for practice"}
+              <SubmitButton variant={left ? "default" : "outline"} className="relative h-11 w-full font-semibold" pendingLabel="Dealing…">
+                <Play className="size-4" aria-hidden /> {left ? "Play a round" : "Play for practice"}
+                <ArrowRight className="absolute right-4 size-4" aria-hidden />
               </SubmitButton>
             </form>
           </li>
@@ -85,7 +127,18 @@ export function SubjectCards({ start, rankedLeft }: { start: Start; rankedLeft: 
 }
 
 function BoardRows({ board, empty }: { board: Board; empty: string }) {
-  if (!board.top.length) return <p className="py-6 text-center text-sm text-muted-foreground">{empty}</p>;
+  if (!board.top.length) {
+    const [title, ...rest] = empty.split(". ");
+    return (
+      <div className="py-8 text-center">
+        <span className="mx-auto grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
+          <BarChart3 className="size-5" aria-hidden />
+        </span>
+        <p className="mt-3 font-semibold">{title}.</p>
+        <p className="mt-1 text-sm text-muted-foreground">{rest.join(". ")}</p>
+      </div>
+    );
+  }
   const outside = board.you && !board.top.some((e) => e.you) ? board.you : null;
   const row = (e: BoardEntry) => (
     <li key={`${e.rank}-${e.name}`} aria-current={e.you ? "true" : undefined} className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm", e.you && "bg-primary/10 font-semibold")}>
@@ -110,16 +163,27 @@ function BoardRows({ board, empty }: { board: Board; empty: string }) {
 
 export function Leaderboard({ week, allTime, roleTitle }: { week: Board; allTime: Board; roleTitle: string }) {
   return (
-    <Panel title={`${roleTitle} leaderboard`}>
-      <Tabs defaultValue="week" className="gap-3">
-        <TabsList aria-label="Leaderboard period">
-          <TabsTrigger value="week" className="px-3">This week</TabsTrigger>
-          <TabsTrigger value="all" className="px-3">All time</TabsTrigger>
-        </TabsList>
+    <section className="rounded-3xl border border-foreground/10 bg-card/70 p-5 shadow-sm backdrop-blur sm:p-6">
+      <Tabs defaultValue="week" className="gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+              <Trophy className="size-5" aria-hidden />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">{roleTitle} leaderboard</h2>
+              <p className="text-sm text-muted-foreground">Top performers, resetting every Monday.</p>
+            </div>
+          </div>
+          <TabsList aria-label="Leaderboard period">
+            <TabsTrigger value="week" className="px-4">This week</TabsTrigger>
+            <TabsTrigger value="all" className="px-4">All time</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="week"><BoardRows board={week} empty="Nobody has scored this week yet. Play a round and take first place." /></TabsContent>
         <TabsContent value="all"><BoardRows board={allTime} empty="Nobody has scored yet. Play a round and take first place." /></TabsContent>
       </Tabs>
-    </Panel>
+    </section>
   );
 }
 
